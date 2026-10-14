@@ -16,8 +16,10 @@ Daten in Echtzeit sehen. Kein Login nötig.
 ## So starte ich den Prototypen
 
 1. **Online:** <https://klabundo.github.io/kaethekiste/> im Browser öffnen – fertig.
-   Die 11 Beispieldaten (u. a. ein zugeordnetes iPhone-Paar und zwei abgeschlossene
-   Fälle) liegen bereits in der gemeinsamen Datenbank.
+   Die 17 Beispieldaten (u. a. ein zugeordnetes iPhone-Paar, zwei abgeschlossene
+   Fälle und ein archivierter Fund) liegen bereits in der gemeinsamen Datenbank.
+   Die Seite startet in der Hilfenansicht mit einem kompakten Onboarding
+   („So funktioniert’s“); die Startansicht zeigt die neuesten Einträge.
 2. **Oder lokal:** `index.html` im Browser öffnen – der Zugriff auf Supabase
    funktioniert auch ohne lokalen Webserver. (Falls gewünscht:
    `python3 -m http.server 8000` starten und http://localhost:8000 öffnen.)
@@ -49,7 +51,7 @@ kkg-fundsachen/
 │   └── logo-emblem.svg # Nur das runde Emblem (Topbar, Footer, Favicon)
 ├── backend/
 │   ├── schema.sql      # Tabellen fundsachen + zuordnungen, RLS, Storage-Policies
-│   ├── seed.sql        # 11 Beispieldaten
+│   ├── seed.sql        # 17 Beispieldaten
 │   ├── setup.sql       # Schema + Seed (einmalig)
 │   ├── sync-pages.sh   # deployt die App auf GitHub Pages
 │   └── README.md       # Backend-Doku (Setup, Sicherheit, Betrieb)

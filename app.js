@@ -73,7 +73,7 @@ function icon(name, size = 14) {
 /* ---------------- State ---------------- */
 const state = {
   items: [],
-  view: "start",
+  view: "hilfe", // Start: Hilfe mit kompaktem Onboarding
   filters: { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" },
   selectedId: null,
   loadError: false, // letzter Datenabruf fehlgeschlagen (Banner über der Ansicht)
@@ -427,7 +427,7 @@ function viewStart() {
   const found = active.filter(i => i.type === "found").length;
   const lost = active.length - found;
   const solved = state.items.filter(i => i.status === "abgeholt").length;
-  const recent = active.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 6);
+  const recent = active.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
   return `
   <div class="hero">
     <p class="hero-kicker">Käthe-Kollwitz-Gymnasium · Fundsachen</p>
@@ -447,35 +447,16 @@ function viewStart() {
     <div class="stat"><div class="num">${state.items.length}</div><div class="lbl">Einträge gesamt</div><div class="hint">inkl. Archiv</div></div>
   </div>
 
-  <div class="grid-2">
-    <section class="card">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Aktuelle Fundsachen</h2>
-          <p class="section-sub">Die ${Math.min(6, recent.length)} neuesten offenen Einträge.</p>
-        </div>
-        <span class="count-pill">${active.length} aktiv</span>
+  <section class="card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">Aktuelle Fundsachen</h2>
+        <p class="section-sub">Die ${Math.min(8, recent.length)} neuesten offenen Einträge – Details, Matches und Aktionen im Klick.</p>
       </div>
-      ${recent.length ? `<div class="item-grid">${recent.map(itemCard).join("")}</div>` : emptyHtml("start")}
-    </section>
-    <section class="card">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">So funktioniert’s</h2>
-          <p class="section-sub">Drei Schritte – von der Meldung bis zur Abholung.</p>
-        </div>
-      </div>
-      <ol class="steps">
-        <li><strong>Melden:</strong> Verlust oder Fund mit Foto, Kategorie und Fundort erfassen.</li>
-        <li><strong>Matching:</strong> Der Algorithmus schlägt passende Gegenstücke vor und zeigt den Ähnlichkeits-Grad.</li>
-        <li><strong>Abholen:</strong> Zuordnung bestätigen und das Teil über das Sekretariat zurückbekommen – gegen kurze Identifikation.</li>
-      </ol>
-      <div class="card-actions">
-        <button class="btn btn--outline btn--sm" data-action="nav" data-view="hilfe">Mehr in der Hilfe</button>
-        <button class="btn btn--ghost btn--sm" data-action="nav" data-view="statistik">Zur Übersicht</button>
-      </div>
-    </section>
-  </div>`;
+      <span class="count-pill">${active.length} aktiv</span>
+    </div>
+    ${recent.length ? `<div class="item-grid">${recent.map(itemCard).join("")}</div>` : emptyHtml("start")}
+  </section>`;
 }
 
 /* ---------------- Ansicht: Liste ---------------- */
@@ -731,6 +712,26 @@ function viewStats() {
 /* ---------------- Ansicht: Hilfe ---------------- */
 function viewHelp() {
   return `
+  <section class="card onb">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">So funktioniert’s</h2>
+        <p class="section-sub">Vier Schritte – vom Fund bis zur Abholung. So nimmt deine Klasse das System in zwei Minuten in Betrieb.</p>
+      </div>
+    </div>
+    <ol class="steps onb-steps">
+      <li><strong>Melden:</strong> Verlust oder Fund erfassen – am besten mit Foto, Kategorie und Ort.</li>
+      <li><strong>Auto-Abgleich:</strong> Der Algorithmus schlägt sofort passende Gegenstücke vor, inkl. Ähnlichkeits-Grad.</li>
+      <li><strong>Zuordnen:</strong> Passt der Vorschlag, werden beide Einträge verknüpft – Status wechselt auf „In Abwicklung“.</li>
+      <li><strong>Abholen:</strong> Im Sekretariat abholen – nach kurzer Identifikation wird der Eintrag als erledigt markiert.</li>
+    </ol>
+    <div class="card-actions">
+      <button class="btn btn--primary btn--sm" data-action="nav" data-view="form-lost">Etwas verloren?</button>
+      <button class="btn btn--outline btn--sm" data-action="nav" data-view="form-found">Etwas gefunden?</button>
+      <span class="link-arrow" role="button" tabindex="0" data-action="nav" data-view="liste">Zur Fundsachen-Liste${icon("arrow", 14)}</span>
+    </div>
+  </section>
+
   <section class="card">
     <div class="section-head">
       <div>
@@ -1179,14 +1180,25 @@ function sampleItems() {
   linkPair(stF, stL, 7, 5);
   items.push(stF, stL);
 
-  // Offene Einzel-Einträge
+  // Offene Einzel-Einträge (noch kein passender Gegenpart)
   items.push(
     mk("found", 1, { title: "Casio-Rechner fx-991EX", category: "rechner", brand: "Casio", color: "Schwarz", location: "Kopierraum", reporter: "Jonas P. (12c)", contact: "Abgabe: Sekretariat", description: "Lag auf dem Tisch im Kopierraum, Casio fx-991EX." }),
     mk("found", 1, { title: "Rote Lunchbox mit Katzen-Aufkleber", category: "essen", color: "Rot", location: "Mensa / Cafeteria", reporter: "Mila T. (6c)", contact: "Abgabe: Cafeteria", description: "Rote Lunchbox, leer, mit Katzen-Aufkleber." }),
     mk("found", 4, { title: "Blauer Rucksack, voll mit Büchern", category: "nichting", color: "Blau", location: "Pausenhof", reporter: "anonym", contact: "Abgabe: Sekretariat", description: "Blaue Schultasche, voll mit Büchern, am Zaun im Pausenhof gefunden." }),
+    mk("found", 2, { title: "Schlüsselbund mit gelbem Hund-Anhänger", category: "schluessel", color: "Gelb", location: "Briefkasten 1. OG", reporter: "Jonas P. (12c)", contact: "Abgabe: Sekretariat", description: "Schlüssel mit gelbem Hund-Charms, lag in einem Briefkasten im 1. OG." }),
+    mk("found", 5, { title: "Taschenbuch „Der kleine Prinz“", category: "buecher", location: "Bibliothek", reporter: "Frau Brandt", contact: "Abgabe: Bibliothek", description: "Taschenbuch, lag auf einem Sitzplatz in der Bibliothek." }),
     mk("lost", 1, { title: "Schülerausweis, Elena Berger (11a)", category: "ausweis", location: "Mensa / Cafeteria", reporter: "Elena B. (11a)", description: "Schülerausweis verloren, Name: Elena Berger, 11a. Bitte melden!" }),
     mk("lost", 2, { title: "Grüne Thermosflasche", category: "flasche", color: "Grün", location: "Mensa / Cafeteria", reporter: "Nora F. (8b)", description: "Grüne Thermosflasche, vermutlich in der Mensa, mit Gravur „N.F.“." }),
+    mk("lost", 1, { title: "Weiße AirPods Pro im Ladeetui", category: "kopfhörer", color: "Weiß", location: "Musiksaal", reporter: "Jule H. (11c)", description: "AirPods Pro im weißen Etui, vermutlich im Musiksaal verloren." }),
+    mk("lost", 3, { title: "Grünes Matheheft (9c)", category: "hefte", color: "Grün", location: "Raum 9c", reporter: "Max W. (9c)", description: "Grünes Matheheft mit Stempeln, im Klassenzimmer 9c vergessen." }),
+    mk("lost", 1, { title: "Schwarzer Regenschirm", location: "Pausenhof", reporter: "Finn G. (8a)", description: "Schwarzer Regenschirm, nach dem Regen im Pausenhof vergessen." }),
   );
+
+  // Archiviert: älterer Fund, nach zwei Wochen ohne Abholung
+  const cap = mk("found", 21, { title: "Blaue Mütze mit weißem Bommel", category: "kleidung", color: "Blau", location: "Aula", reporter: "anonym", contact: "Abgabe: Sekretariat", description: "Wollmütze mit Bommel, lag nach der großen Pause in der Aula.", status: "archiviert" });
+  cap.events.push({ ts: now - 7 * D, text: "Archiviert" });
+  items.push(cap);
+
   return items;
 }
 

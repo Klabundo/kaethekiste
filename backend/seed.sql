@@ -1,9 +1,14 @@
 -- ============================================================
--- KätheKiste – Beispieldaten (11 Einträge + 3 Zuordnungen)
+-- KätheKiste – Beispieldaten (17 Einträge + 3 Zuordnungen)
 -- Spiegelt exakt sampleItems() aus app.js (Vorlage für die Demo).
 -- Wiedervollzug: on conflict do nothing → keine Duplikate.
 -- reported_at = created_at (Meldedatum == Erfassungszeitpunkt),
 -- events = Verlaufs-Log (Timestamps in Millisekunden-Epoch).
+--
+-- Vollständiger Neustart (z. B. nach Änderungen):
+--   delete from zuordnungen;
+--   delete from fundsachen;
+--   -- dann diese Datei ausführen
 -- ============================================================
 
 insert into fundsachen
@@ -116,6 +121,61 @@ values
    now() - interval '2 days', now() - interval '2 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '2 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
+   )),
+
+  ('a0000000-0000-4000-8000-00000000000c', 'found',
+   'Schlüsselbund mit gelbem Hund-Anhänger',
+   'Schlüssel mit gelbem Hund-Charms, lag in einem Briefkasten im 1. OG.',
+   'schluessel', '', 'Gelb', 'Briefkasten 1. OG', '', 'offen', 'Jonas P. (12c)', 'Abgabe: Sekretariat',
+   now() - interval '2 days', now() - interval '2 days',
+   jsonb_build_array(
+     jsonb_build_object('ts', (extract(epoch from now() - interval '2 days') * 1000)::bigint, 'text', 'Fund gemeldet')
+   )),
+
+  ('a0000000-0000-4000-8000-00000000000d', 'found',
+   'Taschenbuch „Der kleine Prinz“',
+   'Taschenbuch, lag auf einem Sitzplatz in der Bibliothek.',
+   'buecher', '', '', 'Bibliothek', '', 'offen', 'Frau Brandt', 'Abgabe: Bibliothek',
+   now() - interval '5 days', now() - interval '5 days',
+   jsonb_build_array(
+     jsonb_build_object('ts', (extract(epoch from now() - interval '5 days') * 1000)::bigint, 'text', 'Fund gemeldet')
+   )),
+
+  ('a0000000-0000-4000-8000-00000000000e', 'found',
+   'Blaue Mütze mit weißem Bommel',
+   'Wollmütze mit Bommel, lag nach der großen Pause in der Aula.',
+   'kleidung', '', 'Blau', 'Aula', '', 'archiviert', 'anonym', 'Abgabe: Sekretariat',
+   now() - interval '21 days', now() - interval '21 days',
+   jsonb_build_array(
+     jsonb_build_object('ts', (extract(epoch from now() - interval '21 days') * 1000)::bigint, 'text', 'Fund gemeldet'),
+     jsonb_build_object('ts', (extract(epoch from now() - interval '7 days') * 1000)::bigint, 'text', 'Archiviert')
+   )),
+
+  ('a0000000-0000-4000-8000-00000000000f', 'lost',
+   'Weiße AirPods Pro im Ladeetui',
+   'AirPods Pro im weißen Etui, vermutlich im Musiksaal verloren.',
+   'kopfhörer', '', 'Weiß', 'Musiksaal', '', 'offen', 'Jule H. (11c)', '',
+   now() - interval '1 days', now() - interval '1 days',
+   jsonb_build_array(
+     jsonb_build_object('ts', (extract(epoch from now() - interval '1 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
+   )),
+
+  ('a0000000-0000-4000-8000-000000000010', 'lost',
+   'Grünes Matheheft (9c)',
+   'Grünes Matheheft mit Stempeln, im Klassenzimmer 9c vergessen.',
+   'hefte', '', 'Grün', 'Raum 9c', '', 'offen', 'Max W. (9c)', '',
+   now() - interval '3 days', now() - interval '3 days',
+   jsonb_build_array(
+     jsonb_build_object('ts', (extract(epoch from now() - interval '3 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
+   )),
+
+  ('a0000000-0000-4000-8000-000000000011', 'lost',
+   'Schwarzer Regenschirm',
+   'Schwarzer Regenschirm, nach dem Regen im Pausenhof vergessen.',
+   'sonstiges', '', 'Schwarz', 'Pausenhof', '', 'offen', 'Finn G. (8a)', '',
+   now() - interval '1 days', now() - interval '1 days',
+   jsonb_build_array(
+     jsonb_build_object('ts', (extract(epoch from now() - interval '1 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
    ))
 on conflict (id) do nothing;
 

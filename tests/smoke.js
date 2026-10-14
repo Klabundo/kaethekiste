@@ -213,7 +213,7 @@ check("jaccard keine Übereinstimmung = 0", api.jaccard("rote jacke", "grüne fl
 
 console.log("\n-- Beispieldaten --");
 const samples = api.sampleItems();
-check("11 Beispieldaten", samples.length === 11, "ergeben: " + samples.length);
+check("17 Beispieldaten", samples.length === 17, "ergeben: " + samples.length);
 api.state.items = samples;
 const iphoneLost = samples.find(i => i.type === "lost" && /iphone/i.test(i.title));
 const iphoneFound = samples.find(i => i.type === "found" && /iphone/i.test(i.title));
@@ -252,12 +252,12 @@ const htmls = {
   statistik: api.viewStats(),
   hilfe: api.viewHelp(),
 };
-check("Startansicht rendert", htmls.start.includes("Das Fundsachen-System der Schule.") && htmls.start.includes("hero"));
+check("Startansicht rendert (ohne Onboarding-Panel)", htmls.start.includes("Das Fundsachen-System der Schule.") && htmls.start.includes("hero") && !htmls.start.includes("So funktioniert’s"));
 check("Liste rendert mit Karten", htmls.liste.includes("item-card") && htmls.liste.includes("count-pill"));
 check("Verlust-Formular rendert", htmls.formLost.includes('id="form-lost"'));
 check("Fund-Formular rendert mit Pflichtfeld Kontakt", htmls.formFound.includes('id="form-found"') && htmls.formFound.includes("required"));
 check("Statistik rendert (Balken)", htmls.statistik.includes("bar-fill"));
-check("Hilfe rendert (FAQ)", htmls.hilfe.includes("faq"));
+check("Hilfe rendert (Onboarding + FAQ)", htmls.hilfe.includes("faq") && htmls.hilfe.includes("So funktioniert’s"));
 
 /* ---------- Persistenz gegen Supabase-Mock ---------- */
 function makeFakeForm(values) {
@@ -273,13 +273,13 @@ function makeFakeForm(values) {
 async function main() {
   console.log("\n-- Persistenz (Supabase-Mock) --");
   const okLoad = await api.loadItems();
-  check("loadItems liefert 11 Einträge", okLoad === true && api.state.items.length === 11, "count=" + api.state.items.length);
+  check("loadItems liefert 17 Einträge", okLoad === true && api.state.items.length === 17, "count=" + api.state.items.length);
   const ipL = api.state.items.find(i => /iphone/i.test(i.title) && i.type === "lost");
   const ipF = api.state.items.find(i => /iphone/i.test(i.title) && i.type === "found");
   check("matchedWith aus Zuordnungen", ipL.matchedWith === ipF.id && ipF.matchedWith === ipL.id);
   check("events rekonstruiert (Match-Event)", ipL.events.length >= 2 && ipL.events.some(e => /Zuordnung/i.test(e.text)));
   check("date aus reported_at", Number.isFinite(ipL.date) && ipL.date > 0);
-  check("footer-count aktualisiert", elements["footer-count"].textContent.includes("11"));
+  check("footer-count aktualisiert", elements["footer-count"].textContent.includes("17"));
 
   console.log("\n-- Foto-Upload --");
   const photoUrl = await api.uploadPhoto("data:image/jpeg;base64,QUJD", "foto-test-1");
@@ -289,7 +289,7 @@ async function main() {
   console.log("\n-- Formular-Submit (neuer Eintrag) --");
   const fakeForm = makeFakeForm({ title: "Test-Flasche Wasser", category: "flasche", location: "Mensa / Cafeteria", date: "2026-10-10", reporter: "Test T. (9c)", contact: "Abgabe: Sekretariat" });
   await api.handleFormSubmit(fakeForm);
-  check("neuer Eintrag in DB", store.fundsachen.length === 12, "rows=" + store.fundsachen.length);
+  check("neuer Eintrag in DB", store.fundsachen.length === 18, "rows=" + store.fundsachen.length);
   check("neuer Eintrag im State", api.state.items.some(i => i.title === "Test-Flasche Wasser"));
   const newRow = store.fundsachen.find(r => r.title === "Test-Flasche Wasser");
   check("reported_at aus Formular-Datum", newRow && Date.parse(newRow.reported_at) === Date.parse("2026-10-10T12:00:00"), newRow ? newRow.reported_at : "");

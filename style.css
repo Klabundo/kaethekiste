@@ -169,7 +169,7 @@ code {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 54px 48px 48px;
+  padding: 34px 40px 30px;
   overflow: hidden;
 }
 .hero::before {
@@ -192,7 +192,7 @@ code {
   letter-spacing: -0.015em;
   max-width: 15em;
 }
-.hero .lead { margin: 0 0 30px; max-width: 560px; font-size: 16px; line-height: 1.65; color: var(--ink-2); }
+.hero .lead { margin: 0 0 18px; max-width: 560px; font-size: 16px; line-height: 1.65; color: var(--ink-2); }
 .hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 
 /* ---------- Stats-Strip ---------- */
@@ -251,6 +251,7 @@ main > .card:first-child { margin-top: 0; }
 
 /* ---------- Schritte (Ablauf) ---------- */
 .steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 16px; }
+.onb-steps { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px 24px; }
 .steps li {
   counter-increment: step;
   position: relative;
