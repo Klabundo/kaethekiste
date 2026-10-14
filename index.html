@@ -58,7 +58,7 @@
         <span><strong>KätheKiste</strong> · Käthe-Kollwitz-Gymnasium</span>
       </div>
       <div class="footer-meta">
-        Alle Daten bleiben lokal in deinem Browser (localStorage) – es werden keine Daten an Server übertragen. <span id="footer-count"></span>
+        Die Einträge liegen gemeinsam in einer Cloud-Datenbank (Supabase, Region Frankfurt) und sind für alle am System in Echtzeit sichtbar. <span id="footer-count"></span>
       </div>
     </div>
   </footer>
@@ -72,6 +72,7 @@
   <!-- Toast-Meldungen -->
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="static/supabase.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

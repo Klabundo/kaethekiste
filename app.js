@@ -2,15 +2,15 @@
    KätheKiste – Digitales Fundsachen-System
    Prototyp für das Käthe-Kollwitz-Gymnasium (KKG)
    -----------------------------------------------------------
-   - 100 % client-seitig (kein Server nötig)
-   - Daten persistieren im Browser (localStorage)
+   - Frontend statisch (GitHub Pages), Backend: Supabase
+   - Gemeinsame Datenbank für die ganze Klasse (kein Login)
+   - Fotos: Supabase Storage (automatisch verkleinert)
+   - Live-Synchronisation: neue Einträge erscheinen bei allen
    - Smart Matching: Verlorene ↔ Gefundene werden erkannt
    ============================================================ */
 "use strict";
 
 /* ---------------- Konstanten ---------------- */
-const STORAGE_KEY = "kkg_fundsachen_v1";
-
 const CATEGORIES = [
   { id: "nichting", label: "Tasche / Rucksack" },
   { id: "hefte", label: "Hefte / Notizbücher" },
@@ -76,6 +76,8 @@ const state = {
   view: "start",
   filters: { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" },
   selectedId: null,
+  loadError: false, // letzter Datenabruf fehlgeschlagen (Banner über der Ansicht)
+  saving: false,    // Formular-Submit läuft (Doppelklick-Schutz)
 };
 let draftPhoto = null; // Bild für das gerade ausgefüllte Formular (Data-URL)
 
@@ -101,28 +103,118 @@ function catLabel(id) {
   return c ? c.label : (id || "–");
 }
 
-/* ---------------- Persistenz ---------------- */
-function loadItems() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    state.items = raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    console.warn("Lokale Daten konnten nicht geladen werden.", e);
-    state.items = [];
-  }
+/* ---------------- Persistenz (Supabase – gemeinsame Datenbank) ---------------- */
+const SUPABASE_URL = "https://fhszzxxtvvqtdnqhnktk.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZoc3p6eHh0dnZxdGRucWhua3RrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5NjY0NjEsImV4cCI6MjEwNzU0MjQ2MX0.tSIwHT71-nv71Q1SQ0j-EDbkaLG-bYApgitRRTiD5g4";
+const TBL_ITEMS = "fundsachen";
+const TBL_LINKS = "zuordnungen";
+const BUCKET_FOTOS = "fotos";
+/* Anon-Key ist PUBLIC – er liegt bewusst auch im App-Code (GitHub Pages ist
+   statisch, es gäbe keinen Ort zum Verbergen). RLS erlaubt der Rolle „anon“
+   Lese- und Schreibzugriff: bewusste Prototyp-Entscheidung, begründet in
+   backend/README.md. Der Service-Key bleibt ausschließlich lokal in backend/.env. */
+const db = SupabaseJS.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function tsMs(iso) {
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : Date.now();
 }
-function saveItems() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
-  } catch (e) {
-    toast("Speichern fehlgeschlagen (Speicher voll?). Bild verkleinern oder Einträge archivieren.", "error");
-    console.error(e);
+
+function rowToItem(row, partnerId) {
+  return {
+    id: row.id, type: row.type, title: row.title,
+    category: row.category || "sonstiges",
+    brand: row.brand || "", color: row.color || "",
+    description: row.description || "", location: row.location || "",
+    date: tsMs(row.reported_at),
+    reporter: row.reporter || "", contact: row.contact || "",
+    status: row.status || "offen",
+    photo: row.photo || "",
+    createdAt: tsMs(row.created_at),
+    matchedWith: partnerId || null,
+    events: Array.isArray(row.events) ? row.events : [],
+  };
+}
+
+function itemToRow(it) {
+  return {
+    type: it.type, title: it.title,
+    description: it.description || "",
+    category: it.category || "sonstiges",
+    brand: it.brand || "", color: it.color || "",
+    location: it.location || "", photo: it.photo || "",
+    status: it.status || "offen",
+    reporter: it.reporter || "", contact: it.contact || "",
+    reported_at: new Date(it.date || Date.now()).toISOString(),
+    events: Array.isArray(it.events) ? it.events : [],
+  };
+}
+
+async function loadItems() {
+  const [rItems, rLinks] = await Promise.all([
+    db.from(TBL_ITEMS).select("*"),
+    db.from(TBL_LINKS).select("item_a,item_b"),
+  ]);
+  if (rItems.error || rLinks.error) {
+    console.error("Daten konnten nicht geladen werden.", rItems.error || rLinks.error);
+    state.loadError = true;
+    return false;
   }
+  state.loadError = false;
+  const partner = {};
+  for (const l of rLinks.data || []) { partner[l.item_a] = l.item_b; partner[l.item_b] = l.item_a; }
+  state.items = (rItems.data || []).map(r => rowToItem(r, partner[r.id]));
   updateFooterCount();
+  return true;
 }
+
+let rtTimer = null, realtimeOn = false;
+function onRemoteChange() {
+  clearTimeout(rtTimer);
+  rtTimer = setTimeout(async () => {
+    if (!(await loadItems())) return;
+    if (state.view === "liste") refreshList();
+    else if (!/^form/.test(state.view)) render(); // Formular-Eingaben nicht unterbrechen
+  }, 400);
+}
+
+function subscribeRealtime() {
+  if (realtimeOn) return;
+  realtimeOn = true;
+  db.channel("kkg-live")
+    .on("postgres_changes", { event: "*", schema: "public", table: TBL_ITEMS }, onRemoteChange)
+    .on("postgres_changes", { event: "*", schema: "public", table: TBL_LINKS }, onRemoteChange)
+    .subscribe();
+}
+
+async function retryLoad() {
+  if (await loadItems()) subscribeRealtime();
+  render();
+}
+
+function photoPath(publicUrl) {
+  const i = publicUrl.indexOf("/object/public/");
+  return i === -1 ? null : publicUrl.slice(i + "/object/public/".length);
+}
+
+async function uploadPhoto(dataUrl, id) {
+  const resp = await fetch(dataUrl);
+  const blob = await resp.blob();
+  const path = id + ".jpg";
+  const { error } = await db.storage.from(BUCKET_FOTOS).upload(path, blob, { contentType: "image/jpeg", upsert: true });
+  if (error) throw error;
+  return db.storage.from(BUCKET_FOTOS).getPublicUrl(path).data.publicUrl;
+}
+
+async function removePhoto(item) {
+  if (!item || !item.photo || !item.photo.startsWith("http")) return;
+  const p = photoPath(item.photo);
+  if (p) await db.storage.from(BUCKET_FOTOS).remove([p]);
+}
+
 function updateFooterCount() {
   const el = document.getElementById("footer-count");
-  if (el) el.textContent = state.items.length + " Einträge in diesem Browser.";
+  if (el) el.textContent = state.items.length + " Einträge in der gemeinsamen Datenbank.";
 }
 
 /* ---------------- Matching (Smart Link) ---------------- */
@@ -168,7 +260,7 @@ function findMatches(item, limit = 3, minScore = 0.35) {
     .slice(0, limit);
 }
 
-/* ---------------- Bild-Komprimierung (für localStorage) ---------------- */
+/* ---------------- Bild-Komprimierung (vor dem Foto-Upload) ---------------- */
 function compressImage(file, maxDim = 1000, quality = 0.8) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -214,13 +306,16 @@ function toggleMenu(btn) {
 function render() {
   const main = document.getElementById("main");
   const v = state.view;
-  main.innerHTML =
-    v === "start" ? viewStart() :
+  const banner = state.loadError
+    ? `<div class="conn-banner"><span>Keine Verbindung zur Datenbank – Einträge konnten gerade nicht geladen werden.</span><button class="btn btn--primary btn--sm" data-action="retry-load">Erneut versuchen</button></div>`
+    : "";
+  main.innerHTML = banner +
+    (v === "start" ? viewStart() :
     v === "liste" ? viewList() :
     v === "form-lost" ? viewForm("lost") :
     v === "form-found" ? viewForm("found") :
     v === "statistik" ? viewStats() :
-    viewHelp();
+    viewHelp());
   document.querySelectorAll(".nav [data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === v));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -318,9 +413,10 @@ function emptyHtml(kind) {
   }
   return `<div class="empty">
     <h3 class="empty-title">Noch keine aktiven Einträge</h3>
-    <p>Beim ersten Melden wird die Liste hier automatisch gefüllt.</p>
+    <p>Die gemeinsame Liste ist gerade leer – beim ersten Melden wird sie hier automatisch gefüllt.</p>
     <div class="empty-actions">
-      <button class="btn btn--outline" data-action="load-samples">Beispieldaten laden</button>
+      <button class="btn btn--primary" data-action="nav" data-view="form-lost">Verlust melden</button>
+      <button class="btn btn--outline" data-action="nav" data-view="form-found">Fund melden</button>
     </div>
   </div>`;
 }
@@ -656,13 +752,13 @@ function viewHelp() {
       </div>
       <div class="help-card">
         <h3>Datenschutz</h3>
-        <p>Im Prototyp werden alle Daten nur lokal im Browser (localStorage) gespeichert – es fließen keine Daten an Server. Fotos werden automatisch verkleinert. Private Handynummern gehören nicht in die Meldungen.</p>
+        <p>Die Einträge liegen gemeinsam in einer Cloud-Datenbank (Supabase, Region Frankfurt) – wer das System öffnet, sieht dieselben Daten in Echtzeit. Fotos werden automatisch verkleinert. Private Handynummern oder Adressen gehören nicht in die Meldungen.</p>
       </div>
       <div class="help-card">
         <h3>Starten &amp; Verwalten</h3>
         <ul>
-          <li><code>index.html</code> im Browser öffnen – fertig.</li>
-          <li>Oder lokal servern: <code>python3 -m http.server 8000</code></li>
+          <li>Online: <code>klabundo.github.io/kaethekiste</code> – kein Login, kein Download.</li>
+          <li>Live-Sync: Neue Einträge erscheinen sofort bei allen, die die Seite offen haben.</li>
           <li>Export/Import (JSON) unter „Daten“ – Backup oder Übertragung.</li>
         </ul>
       </div>
@@ -686,22 +782,21 @@ function viewHelp() {
       </details>
       <details>
         <summary>Wofür brauche ich einen Account?</summary>
-        <p>Für den Prototyp nicht – jeder Browser meldet anonym. Für den Echtbetrieb wäre ein Login (z.&nbsp;B. über den Schul-Mailaccount) sinnvoll, damit Meldungen nachvollziehbar sind.</p>
+        <p>Keinen – die gemeinsame Datenbank ist ohne Login erreichbar, damit die ganze Klasse sofort mitmachen kann. Alle Meldungen sind im System für alle sichtbar, deshalb bitte nur Angaben aus dem Schul-Kontext (Name/Klasse) und keine privaten Kontaktdaten.</p>
       </details>
       <details>
         <summary>Was ist der nächste Schritt nach dem Prototyp?</summary>
-        <p>Optionen: Server-Betrieb (z.&nbsp;B. mit Supabase oder einem Schulserver), Foto-Upload mit Freigabe durch Lehrkräfte, Benachrichtigung per E-Mail/Intranet, und eine „Fundbüro“-Sicht für das Sekretariat mit Druckfunktion für Fundzettel.</p>
+        <p>Erledigt: gemeinsame Cloud-Datenbank (Supabase) mit Live-Synchronisation und Foto-Upload. Nächste Ausbaustufen: Benachrichtigung per E-Mail/Intranet, eine „Fundbüro“-Sicht für das Sekretariat mit Druckfunktion für Fundzettel und automatische Archivierung nach 4 Wochen.</p>
       </details>
     </div>
 
     <div class="data-block">
       <h2 class="data-block__title">Daten &amp; Pflege</h2>
-      <p class="data-block__sub">Alles bleibt lokal in diesem Browser. Hier lassen sich Daten sichern, übernehmen oder zurücksetzen.</p>
+      <p class="data-block__sub">Die Daten liegen gemeinsam in der Cloud (Supabase). Hier lassen sich Daten sichern, übernehmen oder zurücksetzen – Vorsicht: „Alle Daten löschen“ betrifft die ganze Klasse.</p>
       <div class="data-actions">
         <button class="btn btn--outline btn--sm" data-action="export-data">${icon("download", 14)} Als JSON exportieren</button>
         <button class="btn btn--outline btn--sm" data-action="import-data">${icon("upload", 14)} JSON importieren</button>
         <input type="file" id="import-file" accept="application/json,.json" hidden>
-        <button class="btn btn--ghost btn--sm" data-action="load-samples">${icon("samples", 14)} Beispieldaten laden</button>
         <button class="btn btn--danger btn--sm" data-action="reset-data">${icon("trash", 14)} Alle Daten löschen</button>
       </div>
     </div>
@@ -808,69 +903,85 @@ function closeModal() {
 }
 
 /* ---------------- Abläufe / Aktionen ---------------- */
-function linkItems(aId, bId) {
+async function linkItems(aId, bId) {
   const a = state.items.find(i => i.id === aId);
   const b = state.items.find(i => i.id === bId);
   if (!a || !b || a.type === b.type || aId === bId) return;
+  const { error: eLink } = await db.from(TBL_LINKS).insert({ item_a: aId, item_b: bId });
+  if (eLink) { toast("Zuordnung fehlgeschlagen: " + eLink.message, "error"); return; }
   const ts = Date.now();
   a.status = "in_abwicklung"; b.status = "in_abwicklung";
   a.matchedWith = b.id; b.matchedWith = a.id;
   a.events.push({ ts, text: "Mit „" + b.title + "“ zugeordnet" });
   b.events.push({ ts, text: "Mit „" + a.title + "“ zugeordnet" });
-  saveItems();
+  await Promise.all([
+    db.from(TBL_ITEMS).update({ status: "in_abwicklung", events: a.events }).eq("id", aId),
+    db.from(TBL_ITEMS).update({ status: "in_abwicklung", events: b.events }).eq("id", bId),
+  ]);
   toast("Zuordnung gestartet – Abholung läuft über das Sekretariat.", "success");
   render();
   openItem(aId);
 }
 
-function markRetrieved(id) {
+async function markRetrieved(id) {
   const item = state.items.find(i => i.id === id);
   if (!item) return;
   const ts = Date.now();
   item.status = "abgeholt";
   item.events.push({ ts, text: "Abholung bestätigt – Sache erledigt" });
+  let other = null;
   if (item.matchedWith) {
-    const other = state.items.find(i => i.id === item.matchedWith);
+    other = state.items.find(i => i.id === item.matchedWith);
     if (other) {
       other.status = "abgeholt";
       other.events.push({ ts, text: "Abholung bestätigt – Sache erledigt" });
     }
   }
-  saveItems();
+  const calls = [db.from(TBL_ITEMS).update({ status: "abgeholt", events: item.events }).eq("id", id)];
+  if (other) calls.push(db.from(TBL_ITEMS).update({ status: "abgeholt", events: other.events }).eq("id", other.id));
+  const results = await Promise.all(calls);
+  if (results.some(r => r.error)) { toast("Bestätigung konnte nicht gespeichert werden.", "error"); return; }
   toast("Abholung bestätigt – erledigt.", "success");
   render();
   openItem(id);
 }
 
-function archiveItem(id) {
+async function archiveItem(id) {
   const it = state.items.find(i => i.id === id);
   if (!it) return;
   it.status = "archiviert";
   it.events.push({ ts: Date.now(), text: "Archiviert" });
-  saveItems();
+  const { error } = await db.from(TBL_ITEMS).update({ status: "archiviert", events: it.events }).eq("id", id);
+  if (error) { toast("Archivieren fehlgeschlagen: " + error.message, "error"); return; }
   toast("Eintrag archiviert.");
   render();
   if (state.selectedId === id) openItem(id);
 }
 
-function deleteItem(id) {
+async function deleteItem(id) {
   const it = state.items.find(i => i.id === id);
   if (!it) return;
   if (!confirm(`„${it.title}“ wirklich löschen?`)) return;
+  const { error } = await db.from(TBL_ITEMS).delete().eq("id", id);
+  if (error) { toast("Löschen fehlgeschlagen: " + error.message, "error"); return; }
+  removePhoto(it);
   state.items = state.items.filter(i => i.id !== id);
   const other = state.items.find(i => i.matchedWith === id);
   if (other) {
     other.matchedWith = null;
-    if (other.status === "in_abwicklung") other.status = "offen";
+    if (other.status === "in_abwicklung") {
+      other.status = "offen";
+      await db.from(TBL_ITEMS).update({ status: "offen" }).eq("id", other.id);
+    }
   }
-  saveItems();
+  updateFooterCount();
   render();
   closeModal();
   toast("Eintrag gelöscht.");
 }
 
 /* ---------------- Formular-Submit ---------------- */
-function handleFormSubmit(form) {
+async function handleFormSubmit(form) {
   const type = form.id === "form-lost" ? "lost" : "found";
   const v = name => (form.querySelector("[name=" + name + "]").value || "").trim();
   const title = v("title"), category = v("category"), location = v("location"), dateStr = v("date");
@@ -882,20 +993,34 @@ function handleFormSubmit(form) {
     toast("Bitte angeben, an wen der Fund weitergeleitet wird.", "error");
     return;
   }
-  const ts = dateStr ? new Date(dateStr + "T12:00:00").getTime() : Date.now();
+  if (state.saving) return; // Doppelklick-Schutz
+  state.saving = true;
+  const now = Date.now();
+  const ts = dateStr ? new Date(dateStr + "T12:00:00").getTime() : now;
   const item = {
     id: uid(), type, title, category,
     brand: v("brand"), color: v("color"),
     description: v("description"), location,
-    date: Number.isFinite(ts) ? ts : Date.now(),
+    date: Number.isFinite(ts) ? ts : now,
     reporter: v("reporter"), contact: v("contact"),
     status: "offen", photo: draftPhoto || "",
-    createdAt: Date.now(), matchedWith: null,
-    events: [{ ts: Date.now(), text: type === "found" ? "Fund gemeldet" : "Verlust gemeldet" }],
+    createdAt: now, matchedWith: null,
+    events: [{ ts: now, text: type === "found" ? "Fund gemeldet" : "Verlust gemeldet" }],
   };
-  state.items.push(item);
-  saveItems();
+  try {
+    if (item.photo) item.photo = await uploadPhoto(item.photo, item.id);
+    const { error } = await db.from(TBL_ITEMS).insert(Object.assign({ id: item.id }, itemToRow(item)));
+    if (error) throw error;
+  } catch (err) {
+    console.error("Speichern fehlgeschlagen:", err);
+    state.saving = false;
+    toast("Eintrag konnte nicht gespeichert werden – bitte erneut versuchen.", "error");
+    return;
+  }
+  state.saving = false;
   draftPhoto = null;
+  state.items.unshift(item);
+  updateFooterCount();
   const matches = findMatches(item, 3, 0.30);
   render();
   openSuccess(item, matches);
@@ -943,47 +1068,70 @@ function exportData() {
   toast("Export gestartet.", "success");
 }
 
-function handleImport(input) {
+async function handleImport(input) {
   const f = input.files && input.files[0];
   input.value = "";
   if (!f) return;
-  f.text().then(txt => {
-    let data;
-    try { data = JSON.parse(txt); }
-    catch { toast("Datei ist kein gültiges JSON.", "error"); return; }
-    const arr = Array.isArray(data) ? data : data.items;
-    if (!Array.isArray(arr)) {
-      toast("Kein passendes Format (erwartet: Array oder {items:[…]}).", "error"); return;
+  let data;
+  try { data = JSON.parse(await f.text()); }
+  catch { toast("Datei ist kein gültiges JSON.", "error"); return; }
+  const arr = Array.isArray(data) ? data : data.items;
+  if (!Array.isArray(arr)) {
+    toast("Kein passendes Format (erwartet: Array oder {items:[…]}).", "error"); return;
+  }
+  const known = new Set(state.items.map(i => i.id));
+  const fresh = [];
+  for (const raw of arr) {
+    if (!raw || typeof raw !== "object" || !raw.title) continue;
+    const it = {
+      id: raw.id || uid(),
+      type: raw.type === "lost" ? "lost" : "found",
+      title: String(raw.title).slice(0, 90),
+      category: raw.category || "sonstiges",
+      brand: raw.brand || "", color: raw.color || "",
+      description: raw.description || "", location: raw.location || "",
+      date: raw.date || Date.now(),
+      reporter: raw.reporter || "", contact: raw.contact || "",
+      status: raw.status || "offen",
+      photo: raw.photo || "",
+      createdAt: raw.createdAt || Date.now(),
+      events: Array.isArray(raw.events) ? raw.events : [],
+      matchedWith: raw.matchedWith || null,
+    };
+    if (!it.events.length) it.events.push({ ts: it.createdAt, text: it.type === "found" ? "Fund gemeldet" : "Verlust gemeldet" });
+    if (!known.has(it.id)) { fresh.push(it); known.add(it.id); }
+  }
+  if (!fresh.length) { toast("Nichts Neues gefunden (alle Einträge existieren bereits)."); return; }
+  try {
+    for (const it of fresh) {
+      if (it.photo && it.photo.startsWith("data:")) {
+        try { it.photo = await uploadPhoto(it.photo, it.id); }
+        catch { it.photo = ""; } // Foto weglassen, Eintrag trotzdem importieren
+      }
     }
-    const ids = new Set(state.items.map(i => i.id));
-    let added = 0;
-    for (const raw of arr) {
-      if (!raw || typeof raw !== "object" || !raw.title) continue;
-      const it = {
-        id: raw.id || uid(),
-        type: raw.type === "lost" ? "lost" : "found",
-        title: String(raw.title).slice(0, 90),
-        category: raw.category || "sonstiges",
-        brand: raw.brand || "", color: raw.color || "",
-        description: raw.description || "", location: raw.location || "",
-        date: raw.date || Date.now(),
-        reporter: raw.reporter || "", contact: raw.contact || "",
-        status: raw.status || "offen",
-        photo: raw.photo || "",
-        createdAt: raw.createdAt || Date.now(),
-        events: Array.isArray(raw.events) ? raw.events : [],
-        matchedWith: raw.matchedWith || null,
-      };
-      if (!it.events.length) it.events.push({ ts: it.createdAt, text: it.type === "found" ? "Fund gemeldet" : "Verlust gemeldet" });
-      if (!ids.has(it.id)) { state.items.push(it); ids.add(it.id); added++; }
+    const { error } = await db.from(TBL_ITEMS).insert(fresh.map(it => Object.assign({ id: it.id }, itemToRow(it))));
+    if (error) throw error;
+    const links = []; const seen = new Set();
+    for (const it of fresh) {
+      if (!it.matchedWith || !fresh.find(o => o.id === it.matchedWith)) continue;
+      const key = [it.id, it.matchedWith].sort().join("|");
+      if (!seen.has(key)) { seen.add(key); links.push({ item_a: it.id, item_b: it.matchedWith }); }
     }
-    saveItems();
-    render();
-    toast(added + " Einträge importiert (Duplikate übersprungen).", "success");
-  }).catch(() => toast("Import fehlgeschlagen.", "error"));
+    if (links.length) {
+      const { error: eL } = await db.from(TBL_LINKS).insert(links);
+      if (eL) console.warn("Teil der Zuordnungen konnte nicht importiert werden:", eL);
+    }
+  } catch (err) {
+    console.error("Import fehlgeschlagen:", err);
+    toast("Import fehlgeschlagen – bitte erneut versuchen.", "error");
+    return;
+  }
+  await loadItems();
+  render();
+  toast(fresh.length + " Einträge importiert (Duplikate übersprungen).", "success");
 }
 
-/* ---------------- Beispieldaten ---------------- */
+/* ---------------- Beispieldaten (Referenz für Tests & backend/seed.sql) ---------------- */
 function sampleItems() {
   const now = Date.now(), D = 864e5;
   const mk = (type, daysAgo, extra) => {
@@ -1042,19 +1190,19 @@ function sampleItems() {
   return items;
 }
 
-function loadSamples() {
-  if (state.items.length && !confirm("Beispieldaten werden die vorhandenen Einträge ergänzen. Weiter?")) return;
-  const s = sampleItems();
-  state.items.push(...s);
-  saveItems();
-  render();
-  toast("Beispieldaten geladen (" + s.length + " Einträge).", "success");
-}
-
-function resetData() {
-  if (!confirm("Wirklich ALLE Einträge in diesem Browser löschen?")) return;
+async function resetData() {
+  if (!confirm("Wirklich ALLE Einträge in der gemeinsamen Datenbank löschen? Das betrifft die Daten der ganzen Klasse.")) return;
+  const dummy = "00000000-0000-0000-0000-000000000000";
+  const rLinks = await db.from(TBL_LINKS).delete().neq("item_a", dummy);
+  const rItems = await db.from(TBL_ITEMS).delete().neq("id", dummy);
+  if (rLinks.error || rItems.error) {
+    toast("Löschen fehlgeschlagen – bitte erneut versuchen.", "error");
+    console.error(rLinks.error || rItems.error);
+    return;
+  }
+  await Promise.all(state.items.map(it => removePhoto(it)));
   state.items = [];
-  saveItems();
+  updateFooterCount();
   render();
   toast("Alle Daten gelöscht.", "success");
 }
@@ -1090,7 +1238,7 @@ function bindEvents() {
       case "delete-item": deleteItem(el.dataset.id); break;
       case "export-data": exportData(); break;
       case "import-data": { const i = document.getElementById("import-file"); if (i) i.click(); break; }
-      case "load-samples": loadSamples(); break;
+      case "retry-load": retryLoad(); break;
       case "reset-data": resetData(); break;
       case "pick-photo": { const i = document.getElementById("photo-input"); if (i) i.click(); break; }
       case "clear-photo": clearPhoto(); break;
@@ -1142,10 +1290,10 @@ function bindEvents() {
 }
 
 /* ---------------- Init ---------------- */
-function init() {
-  loadItems();
+async function init() {
   bindEvents();
   updateFooterCount();
+  if (await loadItems()) subscribeRealtime();
   render();
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
