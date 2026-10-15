@@ -532,7 +532,8 @@ function applyFilters(items, ignoreStatus = false) {
 
 /* ---------------- Bausteine ---------------- */
 function typeTag(type) {
-  return `<span class="type-tag type-tag--${type}"><span class="dot"></span>${type === "found" ? "Gefunden" : "Verloren"}</span>`;
+  const isFound = type === "found";
+  return `<span class="type-tag type-tag--${type}"><span class="dot"></span>${isFound ? "Gefunden" : "Verloren"}</span>`;
 }
 function statusTag(status) {
   const st = STATUS[status] || STATUS.offen;
@@ -546,7 +547,7 @@ function itemCard(item) {
   const isOpen = item.status === "offen";
   const claimLabel = item.type === "found" ? "Annehmen" : "Erledigt";
   return `
-  <article class="item-card" data-action="open-item" data-id="${item.id}" tabindex="0">
+  <article class="item-card item-card--${item.type}" data-action="open-item" data-id="${item.id}" tabindex="0">
     <div class="item-card__photo">${photo}</div>
     <div class="item-card__body">
       <div class="item-row">${typeTag(item.type)}${statusTag(item.status)}</div>
@@ -559,7 +560,7 @@ function itemCard(item) {
       <div class="item-card__foot">
         <span class="cat-label">${escapeHtml(catLabel(item.category))}</span>
         <div class="item-card__foot-actions">
-          ${isOpen ? `<button type="button" class="btn btn--outline btn--xs btn-claim-quick" data-action="claim-item" data-id="${item.id}" title="${item.type === "found" ? "Direkt annehmen" : "Als erledigt markieren"}">${icon("check", 11)} ${claimLabel}</button>` : ""}
+          ${isOpen ? `<button type="button" class="btn btn--outline btn--xs btn-claim-quick btn-claim-quick--${item.type}" data-action="claim-item" data-id="${item.id}" title="${item.type === "found" ? "Direkt annehmen" : "Als erledigt markieren"}">${icon("check", 11)} ${claimLabel}</button>` : ""}
           <span class="details-link">Details${icon("arrow", 13)}</span>
         </div>
       </div>
@@ -623,6 +624,57 @@ function emptyHtml(kind) {
   </div>`;
 }
 
+function renderItemsGrid(items, isArchive = false) {
+  if (!items.length) return emptyHtml(isArchive ? "archive" : "list");
+  if (isArchive) {
+    return `<div class="item-grid">${items.map(itemCard).join("")}</div>`;
+  }
+  const foundItems = items.filter(i => i.type === "found");
+  const lostItems = items.filter(i => i.type === "lost");
+  if (state.filters.type === "found") {
+    return `
+    <div class="type-section type-section--found">
+      <div class="type-section__head">
+        <h3 class="type-section__title"><span class="dot"></span> Gefundene Gegenstände</h3>
+        <span class="type-section__count">${foundItems.length} Funde</span>
+      </div>
+      <div class="item-grid">${foundItems.map(itemCard).join("")}</div>
+    </div>`;
+  }
+  if (state.filters.type === "lost") {
+    return `
+    <div class="type-section type-section--lost">
+      <div class="type-section__head">
+        <h3 class="type-section__title"><span class="dot"></span> Verlorene Gegenstände</h3>
+        <span class="type-section__count">${lostItems.length} Verluste</span>
+      </div>
+      <div class="item-grid">${lostItems.map(itemCard).join("")}</div>
+    </div>`;
+  }
+  let html = "";
+  if (foundItems.length) {
+    html += `
+    <div class="type-section type-section--found">
+      <div class="type-section__head">
+        <h3 class="type-section__title"><span class="dot"></span> Gefundene Gegenstände</h3>
+        <span class="type-section__count">${foundItems.length} Funde</span>
+      </div>
+      <div class="item-grid">${foundItems.map(itemCard).join("")}</div>
+    </div>`;
+  }
+  if (lostItems.length) {
+    html += `
+    <div class="type-section type-section--lost">
+      <div class="type-section__head">
+        <h3 class="type-section__title"><span class="dot"></span> Verlorene Gegenstände</h3>
+        <span class="type-section__count">${lostItems.length} Verluste</span>
+      </div>
+      <div class="item-grid">${lostItems.map(itemCard).join("")}</div>
+    </div>`;
+  }
+  return html || emptyHtml("list");
+}
+
 /* ---------------- Ansicht: Start ---------------- */
 function viewStart() {
   const active = state.items.filter(i => ACTIVE_STATUSES.includes(i.status));
@@ -631,15 +683,14 @@ function viewStart() {
   const solved = state.items.filter(i => i.status === "abgeholt").length;
   const archived = state.items.filter(i => i.status === "archiviert").length;
   const recent = active.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
+  const recentFound = recent.filter(i => i.type === "found");
+  const recentLost = recent.filter(i => i.type === "lost");
   return `
   <div class="hero">
-    <p class="hero-kicker">Käthe-Kollwitz-Gymnasium · Fundsachen</p>
     <h1>Das Fundsachen-System der Schule.</h1>
-    <p class="lead">Verluste und Funde an einem Ort – automatisch abgeglichen.</p>
     <div class="hero-actions">
-      <button class="btn btn--outline" data-action="nav" data-view="form-lost">Etwas verloren?</button>
-      <button class="btn btn--primary" data-action="nav" data-view="form-found">Etwas gefunden?</button>
-      <span class="link-arrow" role="button" tabindex="0" data-action="nav" data-view="liste">Zur Fundsachen-Liste${icon("arrow", 14)}</span>
+      <button class="btn btn--outline" data-action="nav" data-view="form-lost">Verlust melden</button>
+      <button class="btn btn--primary" data-action="nav" data-view="form-found">Fund melden</button>
     </div>
   </div>
 
@@ -657,7 +708,23 @@ function viewStart() {
       </div>
       <span class="count-pill">${active.length} aktiv</span>
     </div>
-    ${recent.length ? `<div class="item-grid">${recent.map(itemCard).join("")}</div>` : emptyHtml("start")}
+    ${recentFound.length ? `
+    <div class="type-section type-section--found">
+      <div class="type-section__head">
+        <h3 class="type-section__title"><span class="dot"></span> Gefundene Gegenstände</h3>
+        <span class="type-section__count">${recentFound.length} offen</span>
+      </div>
+      <div class="item-grid">${recentFound.map(itemCard).join("")}</div>
+    </div>` : ""}
+    ${recentLost.length ? `
+    <div class="type-section type-section--lost" style="margin-top:20px;">
+      <div class="type-section__head">
+        <h3 class="type-section__title"><span class="dot"></span> Verlorene Gegenstände</h3>
+        <span class="type-section__count">${recentLost.length} offen</span>
+      </div>
+      <div class="item-grid">${recentLost.map(itemCard).join("")}</div>
+    </div>` : ""}
+    ${!recent.length ? emptyHtml("start") : ""}
   </section>`;
 }
 
@@ -666,6 +733,9 @@ function viewList() {
   const items = applyFilters(state.items);
   const f = state.filters;
   const archivedCount = state.items.filter(i => i.status === "archiviert").length;
+  const activeItems = state.items.filter(i => ACTIVE_STATUSES.includes(i.status));
+  const foundCount = activeItems.filter(i => i.type === "found").length;
+  const lostCount = activeItems.filter(i => i.type === "lost").length;
   return `
   <section class="card">
     <div class="section-head">
@@ -676,6 +746,17 @@ function viewList() {
         <span class="count-pill" id="count-pill">${items.length} Treffer</span>
         <button class="btn btn--outline btn--sm" data-action="nav" data-view="archiv" title="Zum Archiv wechseln">${icon("archive", 14)} Archiv (${archivedCount})</button>
       </div>
+    </div>
+    <div class="type-segmented" role="tablist" aria-label="Gegenstandsart filtern">
+      <button type="button" class="type-segment ${f.type === 'alle' ? 'active' : ''}" data-action="filter-type" data-val="alle">
+        Alle (${activeItems.length})
+      </button>
+      <button type="button" class="type-segment type-segment--found ${f.type === 'found' ? 'active' : ''}" data-action="filter-type" data-val="found">
+        <span class="dot"></span> Gefunden (${foundCount})
+      </button>
+      <button type="button" class="type-segment type-segment--lost ${f.type === 'lost' ? 'active' : ''}" data-action="filter-type" data-val="lost">
+        <span class="dot"></span> Verloren (${lostCount})
+      </button>
     </div>
     <div class="toolbar">
       <label class="search">${icon("search", 15)}
@@ -703,7 +784,7 @@ function viewList() {
         ${LOCATIONS.map(l => `<option value="${escapeHtml(l)}"${f.loc === l ? " selected" : ""}>${escapeHtml(l)}</option>`).join("")}
       </select>
     </div>
-    <div id="item-grid-wrap">${items.length ? `<div class="item-grid">${items.map(itemCard).join("")}</div>` : emptyHtml("list")}</div>
+    <div id="item-grid-wrap">${renderItemsGrid(items, false)}</div>
   </section>`;
 }
 
@@ -1483,10 +1564,11 @@ function refreshList() {
   const grid = document.getElementById("item-grid-wrap");
   const pill = document.getElementById("count-pill");
   if (!grid) return;
-  grid.innerHTML = items.length
-    ? `<div class="item-grid">${items.map(itemCard).join("")}</div>`
-    : emptyHtml(isArchive ? "archive" : "list");
+  grid.innerHTML = renderItemsGrid(items, isArchive);
   if (pill) pill.textContent = isArchive ? items.length + " archiviert" : items.length + " Treffer";
+  document.querySelectorAll(".type-segment").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.val === state.filters.type);
+  });
 }
 
 function bindEvents() {
@@ -1498,6 +1580,14 @@ function bindEvents() {
         case "nav": setView(el.dataset.view); return;
         case "nav-close": closeModal(); setView(el.dataset.view); return;
         case "home": setView("start"); return;
+        case "filter-type": {
+          const val = el.dataset.val;
+          state.filters.type = val;
+          const sel = document.getElementById("f-type");
+          if (sel) sel.value = val;
+          refreshList();
+          return;
+        }
         case "toggle-menu": toggleMenu(el); return;
         case "toggle-theme": toggleTheme(); return;
         case "open-item": openItem(el.dataset.id); return;

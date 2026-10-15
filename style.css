@@ -387,6 +387,8 @@ main > .card:first-child { margin-top: 0; }
   transition: border-color 0.15s, box-shadow 0.2s, transform 0.2s;
 }
 .item-card:hover { border-color: var(--line-2); box-shadow: var(--shadow); transform: translateY(-1px); }
+.item-card--found { border-left: 4px solid var(--ok); }
+.item-card--lost { border-left: 4px solid var(--accent); }
 
 .item-card__photo {
   aspect-ratio: 16 / 10;
@@ -411,12 +413,17 @@ main > .card:first-child { margin-top: 0; }
 .item-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
 .type-tag {
-  display: inline-flex; align-items: center; gap: 7px;
+  display: inline-flex; align-items: center; gap: 6px;
   font-size: 10.5px; font-weight: 700;
-  letter-spacing: 0.11em; text-transform: uppercase;
+  letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--ink);
+  padding: 3px 8px;
+  border-radius: 999px;
 }
-.type-tag .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); }
+.type-tag .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+.type-tag--found { background: var(--ok-soft); color: var(--ok); }
+.type-tag--found .dot { background: var(--ok); }
+.type-tag--lost { background: var(--accent-soft); color: var(--accent); }
 .type-tag--lost .dot { background: var(--accent); }
 
 .status-tag {
@@ -427,6 +434,73 @@ main > .card:first-child { margin-top: 0; }
 .status-tag--offen { color: var(--pending); }
 .status-tag--in_abwicklung { color: var(--ink); }
 .status-tag--abgeholt { color: var(--ok); }
+
+/* Quick-Buttons nach Typ */
+.btn-claim-quick--found { color: var(--ok); border-color: var(--ok-line); }
+.btn-claim-quick--found:hover { background: var(--ok-soft); }
+.btn-claim-quick--lost { color: var(--accent); border-color: var(--danger-line); }
+.btn-claim-quick--lost:hover { background: var(--accent-soft); }
+
+/* Segmentierter Filter für Gefunden / Verloren */
+.type-segmented {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+.type-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.type-segment:hover { color: var(--ink); background: var(--surface); }
+.type-segment.active {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.type-segment--found .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.type-segment--lost .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.type-segment.active.type-segment--found { color: var(--ok); }
+.type-segment.active.type-segment--lost { color: var(--accent); }
+
+/* Gruppen-Abschnitte für Gefunden & Verloren */
+.type-section { margin-top: 10px; }
+.type-section + .type-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--line);
+}
+.type-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.type-section__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ink);
+}
+.type-section--found .type-section__title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.type-section--lost .type-section__title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.type-section__count { font-size: 12px; font-weight: 600; color: var(--ink-3); }
 
 .item-card__title { margin: 0; font-size: 15.5px; font-weight: 600; line-height: 1.35; letter-spacing: -0.005em; }
 .item-card__desc {
