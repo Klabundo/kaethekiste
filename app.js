@@ -523,6 +523,7 @@ function toast(msg, type = "") {
 
 /* ---------------- Routing & Rendering ---------------- */
 function setView(view) {
+  closeModal();
   if ((view === "archiv" || view === "statistik") && !isAdminAuthenticated()) {
     state.view = "admin";
     render();
@@ -779,7 +780,10 @@ function viewStart() {
       <div>
         <h2 class="section-title">Aktuelle Fundsachen</h2>
       </div>
-      <span class="count-pill">${active.length} aktiv</span>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span class="count-pill">${active.length} aktiv</span>
+        <button class="btn btn--ghost btn--sm" data-action="nav" data-view="liste">Alle filtern &amp; suchen &rarr;</button>
+      </div>
     </div>
     ${recentFound.length ? `
     <div class="type-section type-section--found">
@@ -796,6 +800,12 @@ function viewStart() {
         <span class="type-section__count">${recentLost.length} offen</span>
       </div>
       <div class="item-grid">${recentLost.map(itemCard).join("")}</div>
+    </div>` : ""}
+    ${recent.length ? `
+    <div style="margin-top:20px; text-align:center;">
+      <button class="btn btn--outline btn--sm" data-action="nav" data-view="liste">
+        ${icon("search", 14)} Alle ${active.length} Fundsachen anzeigen &amp; durchsuchen
+      </button>
     </div>` : ""}
     ${!recent.length ? emptyHtml("start") : ""}
   </section>`;
@@ -834,11 +844,6 @@ function viewList() {
       <label class="search">${icon("search", 15)}
         <input id="f-q" placeholder="Suchen: z.&nbsp;B. „iPhone“, „Puma“, „Mensa“ …" value="${escapeHtml(f.q)}" autocomplete="off">
       </label>
-      <select id="f-type" aria-label="Art filtern">
-        <option value="alle"${f.type === "alle" ? " selected" : ""}>Alle</option>
-        <option value="found"${f.type === "found" ? " selected" : ""}>Gefunden</option>
-        <option value="lost"${f.type === "lost" ? " selected" : ""}>Verloren</option>
-      </select>
       <select id="f-status" aria-label="Status filtern">
         <option value="aktiv"${f.status === "aktiv" ? " selected" : ""}>Aktiv (offen)</option>
         <option value="offen"${f.status === "offen" ? " selected" : ""}>Offen</option>
@@ -881,11 +886,6 @@ function viewArchive() {
       <label class="search">${icon("search", 15)}
         <input id="f-q" placeholder="Im Archiv suchen: z.&nbsp;B. „Mütze“, „Aula“ …" value="${escapeHtml(f.q)}" autocomplete="off">
       </label>
-      <select id="f-type" aria-label="Art filtern">
-        <option value="alle"${f.type === "alle" ? " selected" : ""}>Alle</option>
-        <option value="found"${f.type === "found" ? " selected" : ""}>Gefunden</option>
-        <option value="lost"${f.type === "lost" ? " selected" : ""}>Verloren</option>
-      </select>
       <select id="f-cat" aria-label="Kategorie filtern">
         <option value="alle"${f.cat === "alle" ? " selected" : ""}>Alle Kategorien</option>
         ${CATEGORIES.map(c => `<option value="${c.id}"${f.cat === c.id ? " selected" : ""}>${c.label}</option>`).join("")}
@@ -1524,7 +1524,21 @@ function openItem(id) {
       <button class="btn btn--ghost btn--sm" data-action="close-modal">Schließen</button>
     </div>
   </div>`;
-  document.getElementById("modal").hidden = false;
+
+  const panel = document.querySelector("#modal .modal-panel");
+  if (panel) {
+    panel.scrollTop = 0;
+    const bodyEl = panel.querySelector ? panel.querySelector(".modal-panel__body") : null;
+    if (bodyEl) bodyEl.scrollTop = 0;
+  }
+  const modal = document.getElementById("modal");
+  if (modal) {
+    modal.hidden = false;
+    modal.scrollTop = 0;
+  }
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.add("modal-open");
+  }
 }
 
 function openSuccess(item, matches) {
@@ -1546,12 +1560,26 @@ function openSuccess(item, matches) {
       <button class="btn btn--ghost" data-action="nav-close" data-view="liste">Zur Liste</button>
     </div>
   </div>`;
-  document.getElementById("modal").hidden = false;
+
+  const panel = document.querySelector("#modal .modal-panel");
+  if (panel) panel.scrollTop = 0;
+  const modal = document.getElementById("modal");
+  if (modal) {
+    modal.hidden = false;
+    modal.scrollTop = 0;
+  }
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.add("modal-open");
+  }
 }
 
 function closeModal() {
-  document.getElementById("modal").hidden = true;
+  const modal = document.getElementById("modal");
+  if (modal) modal.hidden = true;
   state.selectedId = null;
+  if (typeof document !== "undefined" && document.body && document.body.classList) {
+    document.body.classList.remove("modal-open");
+  }
 }
 
 /* ---------------- Abläufe / Aktionen ---------------- */
@@ -1930,6 +1958,10 @@ function refreshList() {
 
 function bindEvents() {
   document.addEventListener("click", e => {
+    if (e.target && e.target.id === "modal") {
+      closeModal();
+      return;
+    }
     const el = e.target.closest ? e.target.closest("[data-action]") : null;
     if (el) {
       const a = el.dataset.action;
@@ -2049,6 +2081,21 @@ function bindEvents() {
       }
     }
   });
+
+  document.addEventListener("wheel", e => {
+    const modal = document.getElementById("modal");
+    if (!modal || modal.hidden) return;
+    const target = e.target;
+    if (target && (target === modal || (target.closest && target.closest(".modal-panel__photo")))) {
+      const body = modal.querySelector(".modal-panel__body");
+      const panel = modal.querySelector(".modal-panel");
+      if (body && body.scrollHeight > body.clientHeight) {
+        body.scrollTop += e.deltaY;
+      } else if (panel && panel.scrollHeight > panel.clientHeight) {
+        panel.scrollTop += e.deltaY;
+      }
+    }
+  }, { passive: true });
 }
 
 /* ---------------- Init ---------------- */

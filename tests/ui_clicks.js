@@ -189,7 +189,7 @@ const documentStub = {
   // stabiles Modal-Panel, damit wir prüfen können, was reingetragen wurde
   querySelector(sel) { if (sel === "#modal .modal-panel") return elements["__panel__"] || (elements["__panel__"] = makeEl("panel")); return makeEl(); },
   querySelectorAll() { return { forEach() {} }; },
-  body: { appendChild() {} },
+  body: Object.assign(makeEl("body"), { appendChild() {} }),
 };
 
 /* ---------- Sandbox + Laden ---------- */
@@ -373,9 +373,13 @@ async function main() {
   inputEvt({ id: "f-q", value: "iphone", closest: () => null });
   await sleep(300);
   check("Suche „iphone“ (Debounce): 2 Treffer", elements["count-pill"].textContent === "2 Treffer" && elements["item-grid-wrap"].innerHTML.includes(ipF.title) && elements["item-grid-wrap"].innerHTML.includes(ipL.title), elements["count-pill"].textContent);
-  changeEvt({ id: "f-type", value: "found" });
-  const exp = api.applyFilters(api.state.items).length;
-  check("Filter type=found (Change)", elements["count-pill"].textContent === exp + " Treffer");
+  click({ action: "filter-type", val: "found" });
+  const expFound = api.applyFilters(api.state.items).length;
+  check("Filter type=found (Segment-Button)", elements["count-pill"].textContent === expFound + " Treffer" && api.state.filters.type === "found");
+  click({ action: "filter-type", val: "lost" });
+  const expLost = api.applyFilters(api.state.items).length;
+  check("Filter type=lost (Segment-Button)", elements["count-pill"].textContent === expLost + " Treffer" && api.state.filters.type === "lost");
+  click({ action: "filter-type", val: "alle" });
 
   console.log("\n-- Daten-Buttons (Export / Import / Foto / Retry) --");
   click({ action: "export-data" });
