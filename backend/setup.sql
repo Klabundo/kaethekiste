@@ -130,7 +130,7 @@ values
   ('a0000000-0000-4000-8000-000000000001', 'found',
    'Weißes iPhone 14 mit Stern-Hülle',
    'Im Briefkasten des 1. OG gefunden. Gehäuse weiß, Hülle mit kleinen Sternen, Code gesperrt.',
-   'handy', '', 'Weiß', 'Flur 1. OG', '', 'in_abwicklung', 'Lena M. (9b)', 'Abgabe: Sekretariat',
+   'handy', '', 'Weiß', 'Flur 1. OG', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000001.jpg', 'in_abwicklung', 'Lena M. (9b)', 'Abgabe: Sekretariat',
    now() - interval '3 days', now() - interval '3 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '3 days') * 1000)::bigint, 'text', 'Fund gemeldet'),
@@ -140,7 +140,7 @@ values
   ('a0000000-0000-4000-8000-000000000002', 'lost',
    'iPhone 14, weiß, Stern-Hülle',
    'iPhone 14 weiß, Hülle mit kleinen Sternen. Bitte dringend!',
-   'handy', '', 'Weiß', 'Flur 1. OG', '', 'in_abwicklung', 'Sami K. (9a)', '',
+   'handy', '', 'Weiß', 'Flur 1. OG', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000002.jpg', 'in_abwicklung', 'Sami K. (9a)', '',
    now() - interval '2 days', now() - interval '2 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '2 days') * 1000)::bigint, 'text', 'Verlust gemeldet'),
@@ -150,7 +150,7 @@ values
   ('a0000000-0000-4000-8000-000000000003', 'found',
    'Schwarze Puma-Jacke, Größe M',
    'Schwarze Puma-Trainingsjacke Größe M, lag auf der Bank in der Sporthalle.',
-   'kleidung', 'Puma', 'Schwarz', 'Turnhalle / Sporthalle', '', 'abgeholt', 'Tom R. (10a)', 'Abgabe: Sekretariat',
+   'kleidung', 'Puma', 'Schwarz', 'Turnhalle / Sporthalle', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000003.jpg', 'abgeholt', 'Tom R. (10a)', 'Abgabe: Sekretariat',
    now() - interval '6 days', now() - interval '6 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '6 days') * 1000)::bigint, 'text', 'Fund gemeldet'),
@@ -161,7 +161,7 @@ values
   ('a0000000-0000-4000-8000-000000000004', 'lost',
    'Puma-Jacke, schwarz, Größe M',
    'Nach dem Sport die Puma-Jacke verloren, schwarz, Größe M.',
-   'kleidung', 'Puma', 'Schwarz', 'Turnhalle / Sporthalle', '', 'abgeholt', 'Ela B. (10b)', '',
+   'kleidung', 'Puma', 'Schwarz', 'Turnhalle / Sporthalle', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000004.jpg', 'abgeholt', 'Ela B. (10b)', '',
    now() - interval '5 days', now() - interval '5 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '5 days') * 1000)::bigint, 'text', 'Verlust gemeldet'),
@@ -172,7 +172,7 @@ values
   ('a0000000-0000-4000-8000-000000000005', 'found',
    'Grünes Stifte-Set (5×)',
    'Fünf grüne Kugelschreiber in einer kleinen Schachtel.',
-   'stifte', '', 'Grün', 'Flur 2. OG', '', 'abgeholt', 'Mira S. (7c)', 'Abgabe: Sekretariat',
+   'stifte', '', 'Grün', 'Flur 2. OG', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000005.jpg', 'abgeholt', 'Mira S. (7c)', 'Abgabe: Sekretariat',
    now() - interval '9 days', now() - interval '9 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '9 days') * 1000)::bigint, 'text', 'Fund gemeldet'),
@@ -183,7 +183,7 @@ values
   ('a0000000-0000-4000-8000-000000000006', 'lost',
    'Fünf grüne Kugelschreiber',
    'Ganzes Stifte-Set (5×) verloren, alle grün.',
-   'stifte', '', 'Grün', 'Flur 2. OG', '', 'abgeholt', 'Ben H. (7a)', '',
+   'stifte', '', 'Grün', 'Flur 2. OG', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000006.jpg', 'abgeholt', 'Ben H. (7a)', '',
    now() - interval '8 days', now() - interval '8 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '8 days') * 1000)::bigint, 'text', 'Verlust gemeldet'),
@@ -194,7 +194,7 @@ values
   ('a0000000-0000-4000-8000-000000000007', 'found',
    'Casio-Rechner fx-991EX',
    'Lag auf dem Tisch im Kopierraum, Casio fx-991EX.',
-   'rechner', 'Casio', 'Schwarz', 'Kopierraum', '', 'offen', 'Jonas P. (12c)', 'Abgabe: Sekretariat',
+   'rechner', 'Casio', 'Schwarz', 'Kopierraum', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000007.jpg', 'offen', 'Jonas P. (12c)', 'Abgabe: Sekretariat',
    now() - interval '1 days', now() - interval '1 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '1 days') * 1000)::bigint, 'text', 'Fund gemeldet')
@@ -203,7 +203,7 @@ values
   ('a0000000-0000-4000-8000-000000000008', 'found',
    'Rote Lunchbox mit Katzen-Aufkleber',
    'Rote Lunchbox, leer, mit Katzen-Aufkleber.',
-   'essen', '', 'Rot', 'Mensa / Cafeteria', '', 'offen', 'Mila T. (6c)', 'Abgabe: Cafeteria',
+   'essen', '', 'Rot', 'Mensa / Cafeteria', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000008.jpg', 'offen', 'Mila T. (6c)', 'Abgabe: Cafeteria',
    now() - interval '1 days', now() - interval '1 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '1 days') * 1000)::bigint, 'text', 'Fund gemeldet')
@@ -212,7 +212,7 @@ values
   ('a0000000-0000-4000-8000-000000000009', 'found',
    'Blauer Rucksack, voll mit Büchern',
    'Blaue Schultasche, voll mit Büchern, am Zaun im Pausenhof gefunden.',
-   'nichting', '', 'Blau', 'Pausenhof', '', 'offen', 'anonym', 'Abgabe: Sekretariat',
+   'nichting', '', 'Blau', 'Pausenhof', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000009.jpg', 'offen', 'anonym', 'Abgabe: Sekretariat',
    now() - interval '4 days', now() - interval '4 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '4 days') * 1000)::bigint, 'text', 'Fund gemeldet')
@@ -221,7 +221,7 @@ values
   ('a0000000-0000-4000-8000-00000000000a', 'lost',
    'Schülerausweis, Elena Berger (11a)',
    'Schülerausweis verloren, Name: Elena Berger, 11a. Bitte melden!',
-   'ausweis', '', '', 'Mensa / Cafeteria', '', 'offen', 'Elena B. (11a)', '',
+   'ausweis', '', '', 'Mensa / Cafeteria', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-00000000000a.jpg', 'offen', 'Elena B. (11a)', '',
    now() - interval '1 days', now() - interval '1 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '1 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
@@ -230,7 +230,7 @@ values
   ('a0000000-0000-4000-8000-00000000000b', 'lost',
    'Grüne Thermosflasche',
    'Grüne Thermosflasche, vermutlich in der Mensa, mit Gravur „N.F.“.',
-   'flasche', '', 'Grün', 'Mensa / Cafeteria', '', 'offen', 'Nora F. (8b)', '',
+   'flasche', '', 'Grün', 'Mensa / Cafeteria', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-00000000000b.jpg', 'offen', 'Nora F. (8b)', '',
    now() - interval '2 days', now() - interval '2 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '2 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
@@ -239,7 +239,7 @@ values
   ('a0000000-0000-4000-8000-00000000000c', 'found',
    'Schlüsselbund mit gelbem Hund-Anhänger',
    'Schlüssel mit gelbem Hund-Charms, lag in einem Briefkasten im 1. OG.',
-   'schluessel', '', 'Gelb', 'Briefkasten 1. OG', '', 'offen', 'Jonas P. (12c)', 'Abgabe: Sekretariat',
+   'schluessel', '', 'Gelb', 'Briefkasten 1. OG', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-00000000000c.jpg', 'offen', 'Jonas P. (12c)', 'Abgabe: Sekretariat',
    now() - interval '2 days', now() - interval '2 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '2 days') * 1000)::bigint, 'text', 'Fund gemeldet')
@@ -248,7 +248,7 @@ values
   ('a0000000-0000-4000-8000-00000000000d', 'found',
    'Taschenbuch „Der kleine Prinz“',
    'Taschenbuch, lag auf einem Sitzplatz in der Bibliothek.',
-   'buecher', '', '', 'Bibliothek', '', 'offen', 'Frau Brandt', 'Abgabe: Bibliothek',
+   'buecher', '', '', 'Bibliothek', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-00000000000d.jpg', 'offen', 'Frau Brandt', 'Abgabe: Bibliothek',
    now() - interval '5 days', now() - interval '5 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '5 days') * 1000)::bigint, 'text', 'Fund gemeldet')
@@ -257,7 +257,7 @@ values
   ('a0000000-0000-4000-8000-00000000000e', 'found',
    'Blaue Mütze mit weißem Bommel',
    'Wollmütze mit Bommel, lag nach der großen Pause in der Aula.',
-   'kleidung', '', 'Blau', 'Aula', '', 'archiviert', 'anonym', 'Abgabe: Sekretariat',
+   'kleidung', '', 'Blau', 'Aula', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-00000000000e.jpg', 'archiviert', 'anonym', 'Abgabe: Sekretariat',
    now() - interval '21 days', now() - interval '21 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '21 days') * 1000)::bigint, 'text', 'Fund gemeldet'),
@@ -267,7 +267,7 @@ values
   ('a0000000-0000-4000-8000-00000000000f', 'lost',
    'Weiße AirPods Pro im Ladeetui',
    'AirPods Pro im weißen Etui, vermutlich im Musiksaal verloren.',
-   'kopfhörer', '', 'Weiß', 'Musiksaal', '', 'offen', 'Jule H. (11c)', '',
+   'kopfhörer', '', 'Weiß', 'Musiksaal', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-00000000000f.jpg', 'offen', 'Jule H. (11c)', '',
    now() - interval '1 days', now() - interval '1 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '1 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
@@ -276,7 +276,7 @@ values
   ('a0000000-0000-4000-8000-000000000010', 'lost',
    'Grünes Matheheft (9c)',
    'Grünes Matheheft mit Stempeln, im Klassenzimmer 9c vergessen.',
-   'hefte', '', 'Grün', 'Raum 9c', '', 'offen', 'Max W. (9c)', '',
+   'hefte', '', 'Grün', 'Raum 9c', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000010.jpg', 'offen', 'Max W. (9c)', '',
    now() - interval '3 days', now() - interval '3 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '3 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
@@ -285,7 +285,7 @@ values
   ('a0000000-0000-4000-8000-000000000011', 'lost',
    'Schwarzer Regenschirm',
    'Schwarzer Regenschirm, nach dem Regen im Pausenhof vergessen.',
-   'sonstiges', '', 'Schwarz', 'Pausenhof', '', 'offen', 'Finn G. (8a)', '',
+   'sonstiges', '', 'Schwarz', 'Pausenhof', 'https://fhszzxxtvvqtdnqhnktk.supabase.co/storage/v1/object/public/fotos/a0000000-0000-4000-8000-000000000011.jpg', 'offen', 'Finn G. (8a)', '',
    now() - interval '1 days', now() - interval '1 days',
    jsonb_build_array(
      jsonb_build_object('ts', (extract(epoch from now() - interval '1 days') * 1000)::bigint, 'text', 'Verlust gemeldet')
