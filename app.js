@@ -523,6 +523,11 @@ function toast(msg, type = "") {
 
 /* ---------------- Routing & Rendering ---------------- */
 function setView(view) {
+  if ((view === "archiv" || view === "statistik") && !isAdminAuthenticated()) {
+    state.view = "admin";
+    render();
+    return;
+  }
   state.view = view;
   if (view === "start" || view === "statistik" || view === "hilfe" || view === "admin") {
     state.filters = { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" };
@@ -540,7 +545,7 @@ function setView(view) {
         if (window.location.hash !== "#/admin" && window.location.hash !== "#admin") {
           window.location.hash = "#/admin";
         }
-      } else {
+      } else if (view !== "archiv" && view !== "statistik") {
         if (window.location.hash === "#/admin" || window.location.hash === "#admin") {
           if (window.history && typeof window.history.replaceState === "function") {
             window.history.replaceState(null, "", window.location.pathname || "/");
@@ -766,7 +771,7 @@ function viewStart() {
     <div class="stat"><div class="num">${found}</div><div class="lbl">Funde offen</div></div>
     <div class="stat"><div class="num">${lost}</div><div class="lbl">Verluste offen</div></div>
     <div class="stat"><div class="num">${solved}</div><div class="lbl">Erfolgreich gelöst</div></div>
-    <div class="stat" data-action="nav" data-view="archiv" role="button" tabindex="0" title="Zum Archiv" style="cursor:pointer;"><div class="num">${archived}</div><div class="lbl">Im Archiv</div></div>
+    <div class="stat"><div class="num">${archived}</div><div class="lbl">Im Archiv</div></div>
   </div>
 
   <section class="card">
@@ -812,7 +817,6 @@ function viewList() {
       </div>
       <div style="display:flex; gap:10px; align-items:center;">
         <span class="count-pill" id="count-pill">${items.length} Treffer</span>
-        <button class="btn btn--outline btn--sm" data-action="nav" data-view="archiv" title="Zum Archiv wechseln">${icon("archive", 14)} Archiv (${archivedCount})</button>
       </div>
     </div>
     <div class="type-segmented" role="tablist" aria-label="Gegenstandsart filtern">
@@ -865,11 +869,12 @@ function viewArchive() {
   <section class="card">
     <div class="section-head">
       <div>
+        <div class="admin-badge">${icon("shield", 12)} Admin-Bereich</div>
         <h2 class="section-title">${icon("archive", 20)} Archivierte Fundsachen</h2>
       </div>
       <div style="display:flex; gap:10px; align-items:center;">
         <span class="count-pill" id="count-pill">${items.length} archiviert</span>
-        <button class="btn btn--outline btn--sm" data-action="nav" data-view="liste">Zurück zu den Fundsachen</button>
+        <button class="btn btn--outline btn--sm" data-action="nav" data-view="admin">&larr; Zurück zum Admin-Panel</button>
       </div>
     </div>
     <div class="toolbar">
@@ -1042,7 +1047,11 @@ function viewStats() {
   <section class="card">
     <div class="section-head">
       <div>
-        <h2 class="section-title">Übersicht</h2>
+        <div class="admin-badge">${icon("shield", 12)} Admin-Bereich</div>
+        <h2 class="section-title">Schul-Übersicht &amp; Statistik</h2>
+      </div>
+      <div>
+        <button class="btn btn--outline btn--sm" data-action="nav" data-view="admin">&larr; Zurück zum Admin-Panel</button>
       </div>
     </div>
     <div class="dash-grid">
@@ -1189,6 +1198,8 @@ function viewAdminDashboard() {
           <p class="admin-sub">Zentrale Administration, Datenmanagement, Archiv-Verwaltung und technische Infrastruktur-Übersicht.</p>
         </div>
         <div class="admin-header__actions">
+          <button type="button" class="btn btn--outline btn--sm" data-action="nav" data-view="archiv">${icon("archive", 14)} Archiv durchsuchen</button>
+          <button type="button" class="btn btn--outline btn--sm" data-action="nav" data-view="statistik">${icon("samples", 14)} Schul-Statistik</button>
           <button type="button" class="btn btn--outline btn--sm" data-action="admin-logout">${icon("lock", 14)} Abmelden</button>
           <button type="button" class="btn btn--ghost btn--sm" data-action="home">${icon("arrow", 14)} Zur Startseite</button>
         </div>

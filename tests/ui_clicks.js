@@ -272,10 +272,8 @@ async function main() {
   console.log("\n-- Topbar / Navigation (data-action=nav) --");
   const views = [
     ["liste", "item-card"],
-    ["archiv", "count-pill"],
     ["form-lost", 'id="form-lost"'],
     ["form-found", 'id="form-found"'],
-    ["statistik", "bar-fill"],
     ["hilfe", "faq"],
     ["start", "hero"],
   ];
@@ -417,6 +415,12 @@ async function main() {
   check("Admin-Route öffnet Gate", api.state.view === "admin" && elements["main"].innerHTML.includes("Geschützter Admin-Bereich"));
   check("Admin ohne Login nicht authentifiziert", api.isAdminAuthenticated() === false);
 
+  // Archiv & Statistik ohne Admin-Login müssen zum Gate umleiten
+  api.setView("archiv");
+  check("Archiv ohne Admin-Login leitet zum Gate um", api.state.view === "admin" && elements["main"].innerHTML.includes("Geschützter Admin-Bereich"));
+  api.setView("statistik");
+  check("Übersicht ohne Admin-Login leitet zum Gate um", api.state.view === "admin" && elements["main"].innerHTML.includes("Geschützter Admin-Bereich"));
+
   // Falsche PIN testen
   submitEvt(Object.assign(new sandbox.HTMLFormElement(), {
     id: "form-admin-auth",
@@ -431,10 +435,17 @@ async function main() {
   }));
   check("Korrekte PIN schaltet Dashboard frei", api.isAdminAuthenticated() === true && elements["main"].innerHTML.includes("Systemverwaltung"));
   check("Session im sessionStorage gespeichert", sandbox.sessionStorage.getItem("kk-admin-auth") === "true");
-  check("Dashboard enthält Datenmanagement & Systemübersicht",
-    elements["main"].innerHTML.includes("Datenmanagement") &&
+  check("Dashboard enthält Daten & Pflege & Systemübersicht",
+    elements["main"].innerHTML.includes("Daten &amp; Pflege") &&
     elements["main"].innerHTML.includes("Archiv-Verwaltung") &&
     elements["main"].innerHTML.includes("/home/jonathan/scratch_opencode/kkg-fundsachen"));
+
+  // Als Admin Zugriff auf Archiv und Statistik
+  api.setView("archiv");
+  check("Admin hat Zugriff auf Archiv", api.state.view === "archiv" && elements["main"].innerHTML.includes("count-pill"));
+  api.setView("statistik");
+  check("Admin hat Zugriff auf Übersicht", api.state.view === "statistik" && elements["main"].innerHTML.includes("bar-fill"));
+  api.setView("admin");
 
   // Abmelden testen
   click({ action: "admin-logout" });
