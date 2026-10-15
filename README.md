@@ -36,7 +36,7 @@ Daten in Echtzeit sehen. Kein Login nötig.
 | **Detailansicht** | Alle Angaben, Verlauf/Timeline, Kontakthinweis, Aktionen (Zuordnen, Abholen, Archivieren, Löschen) |
 | **Übersicht (Dashboard)** | Offene Funde/Verluste, Erfolgsquote, Ø Zeit bis Abholung, Kategorien-Balken, letzte Aktivitäten |
 | **Design-Theme** | Helle Papier-Optik als Standard (Weiß); dunkles Design per Klick (Mond-Button oben rechts), die Wahl wird lokal im Browser gespeichert |
-| **Datenpflege** | Export/Import als JSON, Reset – die Daten liegen gemeinsam in der Cloud (Vorsicht: „Alle Daten löschen“ betrifft alle) |
+| **Admin-Panel & Datenpflege** | Geschützter Verwaltungsbereich (`#/admin` bzw. `/admin`) mit PIN-Gate (`kkg-admin`): Daten & Pflege (Export, Import, Beispieldaten, Reset), Archiv-Verwaltung und Systemübersicht |
 | **Barrierearm** | Tastatur bedienbar (Enter/Space auf Karten, Esc schließt Dialogs), ARIA-Attribute, Skip-Link |
 
 ## Dateistruktur

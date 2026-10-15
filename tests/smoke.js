@@ -168,6 +168,7 @@ const store = makeStore();
 const sandbox = {
   document: documentStub,
   localStorage: makeLocalStorage(),
+  sessionStorage: makeLocalStorage(),
   SupabaseJS: makeSupabaseJS(store),
   confirm: () => true,
   console,
@@ -188,6 +189,7 @@ const code = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 const exportLine = `
 ;globalThis.__api = { state, findMatches, sampleItems, matchScore, applyFilters,
   normalize, tokenize, jaccard, viewStart, viewList, viewArchive, viewForm, viewStats, viewHelp,
+  viewAdmin, viewAdminGate, viewAdminDashboard, purgeArchivedItems, isAdminAuthenticated, setAdminAuthenticated,
   itemCard, setView, STATUS, ACTIVE_STATUSES,
   loadItems, subscribeRealtime, retryLoad, uploadPhoto, removePhoto,
   handleFormSubmit, handleImport, linkItems, markRetrieved, claimItem,
@@ -272,6 +274,14 @@ check("Verlust-Formular rendert", htmls.formLost.includes('id="form-lost"'));
 check("Fund-Formular rendert mit Pflichtfeld Kontakt", htmls.formFound.includes('id="form-found"') && htmls.formFound.includes("required"));
 check("Statistik rendert (Balken)", htmls.statistik.includes("bar-fill"));
 check("Hilfe rendert (Onboarding + FAQ)", htmls.hilfe.includes("faq") && htmls.hilfe.includes("So funktioniert’s"));
+check("Öffentliche Hilfe enthält kein Datenmanagement mehr", !htmls.hilfe.includes("data-action=\"export-data\"") && !htmls.hilfe.includes("data-action=\"reset-data\""));
+check("Admin-Gate rendert bei unauthentifizierter Session", api.viewAdmin().includes("Geschützter Admin-Bereich") && api.viewAdmin().includes('id="form-admin-auth"'));
+api.setAdminAuthenticated(true);
+const adminHtml = api.viewAdmin();
+check("Admin-Dashboard rendert Daten & Pflege", adminHtml.includes("Daten &amp; Pflege") && adminHtml.includes("export-data") && adminHtml.includes("seed-data") && adminHtml.includes("reset-data"));
+check("Admin-Dashboard rendert Archiv-Verwaltung", adminHtml.includes("Archiv-Verwaltung") && adminHtml.includes("admin-purge-archive"));
+check("Admin-Dashboard rendert Systemübersicht & Pfade", adminHtml.includes("System- &amp; Projektübersicht") && adminHtml.includes("/home/jonathan/scratch_opencode/kkg-fundsachen") && adminHtml.includes("klabundo.github.io/kaethekiste"));
+api.setAdminAuthenticated(false);
 
 /* ---------- Persistenz gegen Supabase-Mock ---------- */
 function makeFakeForm(values) {

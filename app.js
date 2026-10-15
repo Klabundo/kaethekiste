@@ -64,6 +64,11 @@ const ICONS = {
   samples: "M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4",
   trash: "M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6.5 7l.8 12a1 1 0 0 0 1 .9h7.4a1 1 0 0 0 1-.9l.8-12",
   archive: "M4 7h16v13H4zM4 4h16v3H4zM10 12h4",
+  lock: "M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zm-12 0V7a5 5 0 0 1 10 0v4",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  code: "M16 18l6-6-6-6M8 6l-6 6 6 6",
+  server: "M2 5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5zm0 10a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4zM6 7h.01M6 17h.01",
+  database: "M4 6c0 1.66 3.58 3 8 3s8-1.34 8-3-3.58-3-8-3-8 1.34-8 3zm0 6c0 1.66 3.58 3 8 3s8-1.34 8-3M4 18c0 1.66 3.58 3 8 3s8-1.34 8-3",
 };
 function icon(name, size = 14) {
   const d = ICONS[name] || "";
@@ -81,6 +86,49 @@ const state = {
   saving: false,    // Formular-Submit läuft (Doppelklick-Schutz)
 };
 let draftPhoto = null; // Bild für das gerade ausgefüllte Formular (Data-URL)
+
+/* ---------------- Admin & Authentifizierung (SessionStorage) ---------------- */
+const ADMIN_PINS = ["kkg-admin", "2026", "kaethekiste", "admin"];
+let adminAuthError = false;
+
+function getSessionStorage() {
+  try {
+    if (typeof sessionStorage !== "undefined") return sessionStorage;
+  } catch (e) { /* z. B. Privatmodus */ }
+  return null;
+}
+
+function isAdminAuthenticated() {
+  const ss = getSessionStorage();
+  return ss ? ss.getItem("kk-admin-auth") === "true" : false;
+}
+
+function setAdminAuthenticated(val) {
+  const ss = getSessionStorage();
+  if (ss) {
+    if (val) ss.setItem("kk-admin-auth", "true");
+    else ss.removeItem("kk-admin-auth");
+  }
+}
+
+function checkAdminRoute() {
+  try {
+    if (typeof window !== "undefined" && window.location) {
+      const hash = window.location.hash || "";
+      const path = window.location.pathname || "";
+      if (hash === "#/admin" || hash === "#admin" || path === "/admin" || path.endsWith("/admin")) {
+        if (state.view !== "admin") {
+          setView("admin");
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  window.addEventListener("hashchange", checkAdminRoute);
+  window.addEventListener("popstate", checkAdminRoute);
+}
 
 /* ---------------- Design-Theme (hell = Default, dunkel = opt-in) ----------------
    Die Wahl wird unter kk-theme in localStorage gespeichert und früh in
@@ -476,7 +524,7 @@ function toast(msg, type = "") {
 /* ---------------- Routing & Rendering ---------------- */
 function setView(view) {
   state.view = view;
-  if (view === "start" || view === "statistik" || view === "hilfe") {
+  if (view === "start" || view === "statistik" || view === "hilfe" || view === "admin") {
     state.filters = { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" };
   } else if (view === "archiv") {
     state.filters = { q: "", type: "alle", status: "archiviert", cat: "alle", loc: "alle" };
@@ -485,6 +533,25 @@ function setView(view) {
   if (navMobile) navMobile.hidden = true;
   const toggleBtn = document.querySelector('[data-action="toggle-menu"]');
   if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
+
+  try {
+    if (typeof window !== "undefined" && window.location) {
+      if (view === "admin") {
+        if (window.location.hash !== "#/admin" && window.location.hash !== "#admin") {
+          window.location.hash = "#/admin";
+        }
+      } else {
+        if (window.location.hash === "#/admin" || window.location.hash === "#admin") {
+          if (window.history && typeof window.history.replaceState === "function") {
+            window.history.replaceState(null, "", window.location.pathname || "/");
+          } else {
+            window.location.hash = "";
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
   render();
 }
 function toggleMenu(btn) {
@@ -506,6 +573,7 @@ function render() {
     v === "form-lost" ? viewForm("lost") :
     v === "form-found" ? viewForm("found") :
     v === "statistik" ? viewStats() :
+    v === "admin" ? viewAdmin() :
     viewHelp());
   document.querySelectorAll(".nav [data-view]").forEach(b => b.classList.toggle("active", b.dataset.view === v));
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1072,18 +1140,296 @@ function viewHelp() {
         <p>Nein, das Fundsachen-System ist direkt ohne Account für die gesamte Schule nutzbar.</p>
       </details>
     </div>
+  </section>`;
+}
 
-    <div class="data-block">
-      <h2 class="data-block__title">Daten &amp; Pflege</h2>
-      <p class="data-block__sub">Daten sichern, importieren oder zurücksetzen.</p>
-      <div class="data-actions">
-        <button class="btn btn--outline btn--sm" data-action="export-data">${icon("download", 14)} Als JSON exportieren</button>
-        <button class="btn btn--outline btn--sm" data-action="import-data">${icon("upload", 14)} JSON importieren</button>
-        <input type="file" id="import-file" accept="application/json,.json" hidden>
-        <button class="btn btn--danger btn--sm" data-action="reset-data">${icon("trash", 14)} Alle Daten löschen</button>
-      </div>
+/* ---------------- Ansicht: Admin-Panel & Systemübersicht ---------------- */
+function viewAdminGate() {
+  return `
+  <section class="card admin-gate-card">
+    <div class="admin-gate">
+      <div class="admin-gate__icon">${icon("shield", 36)}</div>
+      <h2 class="section-title">Geschützter Admin-Bereich</h2>
+      <p class="section-sub">Zugang ausschließlich für Schul- und Betreuungspersonal des KKG. Bitte Passwort oder PIN eingeben.</p>
+      
+      <form id="form-admin-auth" class="admin-gate__form">
+        <div class="admin-gate__field">
+          <label for="admin-pin" class="form-label">Passwort oder PIN</label>
+          <div class="admin-gate__input-wrap">
+            <span class="admin-gate__input-icon">${icon("lock", 16)}</span>
+            <input type="password" id="admin-pin" name="pin" class="form-control" placeholder="Passwort / PIN (z. B. kkg-admin)" required autocomplete="current-password" autofocus>
+          </div>
+        </div>
+        ${adminAuthError ? `<div class="admin-gate__error">${icon("close", 14)} Ungültiges Passwort bzw. PIN. Bitte erneut versuchen.</div>` : ""}
+        <div class="admin-gate__actions">
+          <button type="submit" class="btn btn--primary">${icon("check", 14)} Freischalten</button>
+          <button type="button" class="btn btn--ghost" data-action="home">Zur Startseite</button>
+        </div>
+        <p class="admin-gate__hint"><small>Standard-Zugang für Berechtigte: <code>kkg-admin</code> oder PIN <code>2026</code></small></p>
+      </form>
     </div>
   </section>`;
+}
+
+function viewAdminDashboard() {
+  const allItems = state.items;
+  const activeCount = allItems.filter(i => ACTIVE_STATUSES.includes(i.status)).length;
+  const retrievedCount = allItems.filter(i => i.status === "abgeholt").length;
+  const archivedItems = allItems.filter(i => i.status === "archiviert");
+  const archivedCount = archivedItems.length;
+
+  return `
+  <div class="admin-panel">
+    <!-- Admin Header -->
+    <div class="card admin-header-card">
+      <div class="admin-header">
+        <div class="admin-header__info">
+          <div class="admin-badge">${icon("shield", 14)} Administrator-Bereich</div>
+          <h1 class="admin-title">KätheKiste – Systemverwaltung</h1>
+          <p class="admin-sub">Zentrale Administration, Datenmanagement, Archiv-Verwaltung und technische Infrastruktur-Übersicht.</p>
+        </div>
+        <div class="admin-header__actions">
+          <button type="button" class="btn btn--outline btn--sm" data-action="admin-logout">${icon("lock", 14)} Abmelden</button>
+          <button type="button" class="btn btn--ghost btn--sm" data-action="home">${icon("arrow", 14)} Zur Startseite</button>
+        </div>
+      </div>
+
+      <!-- Schnell-Metriken -->
+      <div class="admin-metrics">
+        <div class="metric-card">
+          <span class="metric-val">${allItems.length}</span>
+          <span class="metric-lbl">Gesamte Fundsachen</span>
+        </div>
+        <div class="metric-card metric-card--active">
+          <span class="metric-val">${activeCount}</span>
+          <span class="metric-lbl">Aktiv (Offen / In Zuordnung)</span>
+        </div>
+        <div class="metric-card metric-card--ok">
+          <span class="metric-val">${retrievedCount}</span>
+          <span class="metric-lbl">Abgeholt / Erledigt</span>
+        </div>
+        <div class="metric-card metric-card--archive">
+          <span class="metric-val">${archivedCount}</span>
+          <span class="metric-lbl">Archiviert</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. Daten & Pflege (Datenmanagement) -->
+    <div class="card admin-section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">${icon("database", 18)} Daten &amp; Pflege (Datenmanagement)</h2>
+          <p class="section-sub">Daten sichern, importieren, mit Beispieldaten befüllen oder zurücksetzen.</p>
+        </div>
+      </div>
+      <div class="admin-box">
+        <p class="admin-box__text">
+          Exportiert alle Fund- und Verlustmeldungen inklusive Historie und Zuordnungen als standardkonformes JSON-Backup,
+          importiert Datensätze aus einer Sicherungsdatei, spielt Beispieldaten ein oder leert die Datenbank im Bedarfsfall vollständig.
+        </p>
+        <div class="data-actions">
+          <button class="btn btn--outline btn--sm" data-action="export-data">${icon("download", 14)} Als JSON exportieren</button>
+          <button class="btn btn--outline btn--sm" data-action="import-data">${icon("upload", 14)} JSON importieren</button>
+          <input type="file" id="import-file" accept="application/json,.json" hidden>
+          <button class="btn btn--outline btn--sm" data-action="seed-data">${icon("samples", 14)} Beispieldaten einspielen</button>
+          <button class="btn btn--danger btn--sm" data-action="reset-data">${icon("trash", 14)} Alle Daten zurücksetzen / löschen</button>
+        </div>
+        <div class="admin-note">
+          <strong>Hinweis:</strong> Änderungen und Löschungen greifen unmittelbar auf die produktive Supabase-Datenbank zu
+          und synchronisieren per Realtime-WebSocket sofort zu allen verbundenen Endgeräten.
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Archiv-Verwaltung -->
+    <div class="card admin-section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">${icon("archive", 18)} Archiv-Verwaltung (${archivedCount} archiviert)</h2>
+          <p class="section-sub">Vollständige Einsicht, Wiederherstellung in den aktiven Umlauf oder endgültige Löschung archivierter Gegenstände.</p>
+        </div>
+        ${archivedCount > 0 ? `
+          <div>
+            <button type="button" class="btn btn--outline btn--sm btn--danger-subtle" data-action="admin-purge-archive">${icon("trash", 14)} Archiv leeren</button>
+          </div>
+        ` : ""}
+      </div>
+
+      <div class="admin-archive-wrap">
+        ${archivedCount > 0 ? `
+          <div class="admin-archive-list">
+            ${archivedItems.map(it => `
+              <div class="admin-archive-item">
+                <div class="admin-archive-item__photo">
+                  ${it.photo ? `<img src="${escapeHtml(it.photo)}" alt="">` : photoPlaceholder(it.category)}
+                </div>
+                <div class="admin-archive-item__main">
+                  <div class="admin-archive-item__head">
+                    <span class="type-tag type-tag--${it.type}"><span class="dot"></span>${it.type === "found" ? "Gefunden" : "Verloren"}</span>
+                    <span class="status-tag status-tag--archiviert">Archiviert</span>
+                    <span class="meta-item">${icon("calendar", 12)} Gemeldet: ${fmtDate(it.date)}</span>
+                  </div>
+                  <h3 class="admin-archive-item__title">${escapeHtml(it.title)}</h3>
+                  <div class="admin-archive-item__meta">
+                    <span><strong>Kategorie:</strong> ${escapeHtml(catLabel(it.category))}</span>
+                    <span>&middot;</span>
+                    <span><strong>Ort:</strong> ${escapeHtml(it.location || "–")}</span>
+                    ${it.reporter ? `<span>&middot;</span><span><strong>Gemeldet von:</strong> ${escapeHtml(it.reporter)}</span>` : ""}
+                  </div>
+                  ${it.description ? `<p class="admin-archive-item__desc">${escapeHtml(it.description)}</p>` : ""}
+                </div>
+                <div class="admin-archive-item__actions">
+                  <button type="button" class="btn btn--outline btn--sm" data-action="open-item" data-id="${it.id}">${icon("search", 13)} Details</button>
+                  <button type="button" class="btn btn--primary btn--sm" data-action="restore-item" data-id="${it.id}">${icon("check", 13)} Wiederherstellen</button>
+                  <button type="button" class="btn btn--danger btn--sm" data-action="delete-item" data-id="${it.id}">${icon("trash", 13)} Endgültig löschen</button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        ` : `
+          <div class="admin-empty">
+            <div class="admin-empty__icon">${icon("archive", 32)}</div>
+            <p>Aktuell befinden sich keine Gegenstände im Archiv.</p>
+          </div>
+        `}
+      </div>
+    </div>
+
+    <!-- 3. System- & Projektübersicht -->
+    <div class="card admin-section">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">${icon("server", 18)} System- &amp; Projektübersicht</h2>
+          <p class="section-sub">Architektur, Dateistruktur und Cloud-Infrastruktur des Projekts KätheKiste.</p>
+        </div>
+      </div>
+
+      <div class="admin-sys-grid">
+        <!-- Box 1: Lokaler Projektpfad -->
+        <div class="admin-sys-card">
+          <div class="admin-sys-card__head">
+            <span class="admin-sys-card__icon">${icon("pin", 16)}</span>
+            <h3 class="admin-sys-card__title">Lokale Projektumgebung</h3>
+          </div>
+          <p class="admin-sys-card__sub">Lokales Dateisystem &amp; Arbeitsverzeichnis:</p>
+          <div class="code-badge"><code>/home/jonathan/scratch_opencode/kkg-fundsachen</code></div>
+          <ul class="admin-sys-list">
+            <li><strong>Repository-Typ:</strong> Statisches No-Build Web-Projekt</li>
+            <li><strong>Laufzeitumgebung:</strong> Moderne Browser (ES6+, Fetch, Canvas, Crypto) &amp; Node.js Test-Runner</li>
+            <li><strong>Entwicklungsstand:</strong> Voll einsatzbereit, automatisiert synchronisiert</li>
+          </ul>
+        </div>
+
+        <!-- Box 2: Projektstruktur & Architektur -->
+        <div class="admin-sys-card">
+          <div class="admin-sys-card__head">
+            <span class="admin-sys-card__icon">${icon("code", 16)}</span>
+            <h3 class="admin-sys-card__title">Projektstruktur &amp; Architektur</h3>
+          </div>
+          <p class="admin-sys-card__sub">Komponenten und Schichten des Systems:</p>
+          <div class="sys-group">
+            <div class="sys-group__label">Frontend</div>
+            <ul class="sys-files">
+              <li><code>index.html</code> <span>Grundgerüst, Topbar, Barrierefreiheit, Theme-Init, Modal-Host</span></li>
+              <li><code>app.js</code> <span>Zentrale Logik, Smart Matching, Supabase-Client, State &amp; Routing</span></li>
+              <li><code>style.css</code> <span>Designsystem (Georgia/Sans), Hell-/Dunkelmodus, responsive Komponenten</span></li>
+            </ul>
+          </div>
+          <div class="sys-group">
+            <div class="sys-group__label">Backend / DB</div>
+            <ul class="sys-files">
+              <li><code>backend/setup.sql</code> <span>Vollständiges DDL-Setup (Tabellen, RLS, Storage)</span></li>
+              <li><code>backend/seed.sql</code> <span>11 Beispieldatensätze &amp; 3 verknüpfte Zuordnungspaare</span></li>
+              <li><code>backend/sync-pages.sh</code> <span>Automatisierter Deploy- &amp; Synchronisations-Script</span></li>
+            </ul>
+          </div>
+          <div class="sys-group">
+            <div class="sys-group__label">Mock-Tests (Headless)</div>
+            <ul class="sys-files">
+              <li><code>tests/smoke.js</code> <span>Matching-, DB-Mock-, State- &amp; Rendering-Tests (Node.js)</span></li>
+              <li><code>tests/ui_clicks.js</code> <span>Simulation der gesamten UI-Event-Delegation &amp; Nutzerinteraktionen</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Box 3: Infrastruktur-Details -->
+        <div class="admin-sys-card">
+          <div class="admin-sys-card__head">
+            <span class="admin-sys-card__icon">${icon("database", 16)}</span>
+            <h3 class="admin-sys-card__title">Infrastruktur &amp; Cloud-Dienste</h3>
+          </div>
+          <p class="admin-sys-card__sub">Live-Dienste und produktive Konfiguration:</p>
+          <div class="sys-group">
+            <div class="sys-group__label">Supabase BaaS (Postgres)</div>
+            <ul class="admin-sys-list">
+              <li><strong>URL:</strong> <span class="url-badge">fhszzxxtvvqtdnqhnktk.supabase.co</span></li>
+              <li><strong>Region:</strong> Frankfurt (Europe Central)</li>
+              <li><strong>Tabelle <code>fundsachen</code>:</strong> Meldungen für Funde &amp; Verluste, Statuswerte, Metadaten, JSONB-Timeline</li>
+              <li><strong>Tabelle <code>zuordnungen</code>:</strong> Match-Relationen zwischen Paaren mit Cascade-Delete</li>
+              <li><strong>Storage-Bucket <code>fotos</code>:</strong> Bildspeicher für Belegfotos (Client-seitig vor Upload komprimiert)</li>
+              <li><strong>Realtime:</strong> Kanal <code>fundsachen-live</code> für Multi-Client-Push</li>
+            </ul>
+          </div>
+          <div class="sys-group">
+            <div class="sys-group__label">GitHub Pages Deployment</div>
+            <ul class="admin-sys-list">
+              <li><strong>Live-URL:</strong> <a href="https://klabundo.github.io/kaethekiste/" target="_blank" rel="noopener noreferrer" class="link-ext">klabundo.github.io/kaethekiste</a></li>
+              <li><strong>Deployment:</strong> Automatischer Sync via <code>./backend/sync-pages.sh</code> direkt ins Live-Repository</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewAdmin() {
+  return isAdminAuthenticated() ? viewAdminDashboard() : viewAdminGate();
+}
+
+async function purgeArchivedItems() {
+  const archived = state.items.filter(i => i.status === "archiviert");
+  if (!archived.length) {
+    toast("Keine archivierten Einträge vorhanden.");
+    return;
+  }
+  if (!confirm(`Wirklich alle ${archived.length} archivierten Fundsachen endgültig aus der Datenbank löschen?`)) return;
+  const ids = archived.map(i => i.id);
+  const { error } = await db.from(TBL_ITEMS).delete().in("id", ids);
+  if (error) {
+    toast("Löschen fehlgeschlagen: " + error.message, "error");
+    return;
+  }
+  archived.forEach(it => removePhoto(it));
+  state.items = state.items.filter(i => i.status !== "archiviert");
+  updateFooterCount();
+  render();
+  toast(`${archived.length} archivierte Einträge endgültig gelöscht.`, "success");
+}
+
+async function seedData() {
+  if (!confirm("Beispieldaten neu in die Datenbank einspielen? Bestehende Duplikate werden übersprungen.")) return;
+  const items = sampleItems();
+  try {
+    const { error } = await db.from(TBL_ITEMS).upsert(items.map(it => Object.assign({ id: it.id }, itemToRow(it))));
+    if (error) throw error;
+    const links = []; const seen = new Set();
+    for (const it of items) {
+      if (!it.matchedWith) continue;
+      const key = [it.id, it.matchedWith].sort().join("|");
+      if (!seen.has(key)) { seen.add(key); links.push({ item_a: it.id, item_b: it.matchedWith }); }
+    }
+    if (links.length) {
+      await db.from(TBL_LINKS).upsert(links);
+    }
+    await loadItems();
+    render();
+    toast("Beispieldaten erfolgreich eingespielt.", "success");
+  } catch (err) {
+    console.error("Seed fehlgeschlagen:", err);
+    toast("Einspielen der Beispieldaten fehlgeschlagen.", "error");
+  }
 }
 
 /* ---------------- Detail-Modal ---------------- */
@@ -1602,6 +1948,18 @@ function bindEvents() {
         case "import-data": { const i = document.getElementById("import-file"); if (i) i.click(); return; }
         case "retry-load": retryLoad(); return;
         case "reset-data": resetData(); return;
+        case "seed-data": seedData(); return;
+        case "admin-logout": {
+          setAdminAuthenticated(false);
+          adminAuthError = false;
+          toast("Admin-Bereich gesperrt.", "info");
+          render();
+          return;
+        }
+        case "admin-purge-archive": {
+          purgeArchivedItems();
+          return;
+        }
         case "pick-photo": { const i = document.getElementById("photo-input"); if (i) i.click(); return; }
         case "clear-photo": clearPhoto(); return;
       }
@@ -1615,6 +1973,22 @@ function bindEvents() {
   document.addEventListener("submit", e => {
     const form = e.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.id === "form-admin-auth") {
+      e.preventDefault();
+      const pinInput = form.querySelector("[name=pin]");
+      const val = (pinInput ? pinInput.value : "").trim().toLowerCase();
+      if (ADMIN_PINS.includes(val)) {
+        adminAuthError = false;
+        setAdminAuthenticated(true);
+        toast("Admin-Bereich freigeschaltet.", "success");
+        render();
+      } else {
+        adminAuthError = true;
+        toast("Ungültiges Passwort bzw. PIN.", "error");
+        render();
+      }
+      return;
+    }
     if (form.id === "form-lost" || form.id === "form-found") {
       e.preventDefault();
       handleFormSubmit(form);
@@ -1671,6 +2045,7 @@ async function init() {
   bindEvents();
   applyTheme(currentTheme()); // Theme synchronisieren (Knopf-Symbol, Theme-Color)
   updateFooterCount();
+  checkAdminRoute();
   if (await loadItems()) subscribeRealtime();
   render();
 }

@@ -197,6 +197,7 @@ const store = makeStore();
 const sandbox = {
   document: documentStub,
   localStorage: makeLocalStorage(),
+  sessionStorage: makeLocalStorage(),
   SupabaseJS: makeSupabaseJS(store),
   confirm: () => true,
   console,
@@ -206,14 +207,14 @@ const sandbox = {
   HTMLFormElement: class {},
   fetch: async () => ({ blob: async () => ({ type: "image/jpeg", size: 42 }) }),
   setTimeout, clearTimeout,
-  window: { scrollTo() {} },
+  window: { scrollTo() {}, location: { hash: "", pathname: "/" }, addEventListener() {} },
   navigator: {},
 };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 
 const code = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
-const exportLine = "\n;globalThis.__api = { state, sampleItems, applyFilters, loadItems };\n";
+const exportLine = "\n;globalThis.__api = { state, sampleItems, applyFilters, loadItems, setView, isAdminAuthenticated, setAdminAuthenticated };\n";
 vm.runInContext(code + exportLine, sandbox);
 const api = sandbox.__api;
 
@@ -410,6 +411,34 @@ async function main() {
   check("Toggle zurück → hell (data-theme + State + Speicherung)",
     documentStub.documentElement.dataset.theme === "light" && api.state.theme === "light" &&
     sandbox.localStorage.getItem("kk-theme") === "light");
+
+  console.log("\n-- Admin-Panel & Gate (Routing, PIN, Auth, Logout) --");
+  api.setView("admin");
+  check("Admin-Route öffnet Gate", api.state.view === "admin" && elements["main"].innerHTML.includes("Geschützter Admin-Bereich"));
+  check("Admin ohne Login nicht authentifiziert", api.isAdminAuthenticated() === false);
+
+  // Falsche PIN testen
+  submitEvt(Object.assign(new sandbox.HTMLFormElement(), {
+    id: "form-admin-auth",
+    querySelector: sel => sel === "[name=pin]" ? { value: "falsch-123" } : null,
+  }));
+  check("Falsche PIN wird abgewiesen", api.isAdminAuthenticated() === false && elements["toast"].textContent.includes("Ungültiges Passwort"));
+
+  // Korrekte PIN testen
+  submitEvt(Object.assign(new sandbox.HTMLFormElement(), {
+    id: "form-admin-auth",
+    querySelector: sel => sel === "[name=pin]" ? { value: "kkg-admin" } : null,
+  }));
+  check("Korrekte PIN schaltet Dashboard frei", api.isAdminAuthenticated() === true && elements["main"].innerHTML.includes("Systemverwaltung"));
+  check("Session im sessionStorage gespeichert", sandbox.sessionStorage.getItem("kk-admin-auth") === "true");
+  check("Dashboard enthält Datenmanagement & Systemübersicht",
+    elements["main"].innerHTML.includes("Datenmanagement") &&
+    elements["main"].innerHTML.includes("Archiv-Verwaltung") &&
+    elements["main"].innerHTML.includes("/home/jonathan/scratch_opencode/kkg-fundsachen"));
+
+  // Abmelden testen
+  click({ action: "admin-logout" });
+  check("Abmelden sperrt Admin-Bereich", api.isAdminAuthenticated() === false && elements["main"].innerHTML.includes("Geschützter Admin-Bereich"));
 
   console.log("\n-- Zurücksetzen (letzte Aktion) --");
   click({ action: "reset-data" });
