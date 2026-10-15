@@ -141,7 +141,15 @@ const THEME_ICONS = {
 };
 function currentTheme() {
   const ds = document.documentElement && document.documentElement.dataset;
-  return ds && ds.theme === "dark" ? "dark" : "light";
+  if (ds && (ds.theme === "dark" || ds.theme === "light")) return ds.theme;
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === "dark" || saved === "light") return saved;
+  } catch (e) {}
+  if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    return "dark";
+  }
+  return "light";
 }
 function applyTheme(theme, persist = false) {
   state.theme = theme;
@@ -150,7 +158,7 @@ function applyTheme(theme, persist = false) {
     try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* z. B. Safari-Privatmodus */ }
   }
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta && meta.setAttribute) meta.setAttribute("content", theme === "dark" ? "#191a1c" : "#f4f3ef");
+  if (meta && meta.setAttribute) meta.setAttribute("content", theme === "dark" ? "#0c0d0f" : "#f7f6f2");
   const btn = document.querySelector('[data-action="toggle-theme"]');
   if (btn) {
     const dark = theme === "dark";
