@@ -269,6 +269,10 @@ async function main() {
     click({ action: "nav", view: v });
     check("Nav-Button → " + v, api.state.view === v && elements["main"].innerHTML.includes(marker));
   }
+  // Klick auf Element mit reinem data-view (ohne data-action)
+  click({ view: "liste" });
+  check("Nav-Element mit reinem data-view → liste", api.state.view === "liste");
+
   click({ action: "home" });
   check("Logo-Button (home) → Start", api.state.view === "start");
 
@@ -279,6 +283,9 @@ async function main() {
   check("Menü öffnen", nav.hidden === false);
   click({ action: "toggle-menu" });
   check("Menü schließen", nav.hidden === true);
+  click({ action: "toggle-menu" });
+  click({ action: "nav", view: "hilfe" });
+  check("Navigation schließt mobiles Menü automatisch", nav.hidden === true);
 
   console.log("\n-- Detail-Modal (open-item / close-modal / Escape / Enter) --");
   const ipF = api.state.items.find(i => /iphone/i.test(i.title) && i.type === "found");

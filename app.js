@@ -295,6 +295,10 @@ function toast(msg, type = "") {
 function setView(view) {
   state.view = view;
   if (view === "start" || view === "statistik" || view === "hilfe") state.filters = { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" };
+  const navMobile = document.getElementById("nav-mobile");
+  if (navMobile) navMobile.hidden = true;
+  const toggleBtn = document.querySelector('[data-action="toggle-menu"]');
+  if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "false");
   render();
 }
 function toggleMenu(btn) {
@@ -477,25 +481,25 @@ function viewList() {
         <input id="f-q" placeholder="Suchen: z.&nbsp;B. „iPhone“, „Puma“, „Mensa“ …" value="${escapeHtml(f.q)}" autocomplete="off">
       </label>
       <select id="f-type" aria-label="Art filtern">
-        <option value="alle">Alle</option>
-        <option value="found">Gefunden</option>
-        <option value="lost">Verloren</option>
+        <option value="alle"${f.type === "alle" ? " selected" : ""}>Alle</option>
+        <option value="found"${f.type === "found" ? " selected" : ""}>Gefunden</option>
+        <option value="lost"${f.type === "lost" ? " selected" : ""}>Verloren</option>
       </select>
       <select id="f-status" aria-label="Status filtern">
-        <option value="aktiv">Aktiv (offen)</option>
-        <option value="offen">Offen</option>
-        <option value="in_abwicklung">In Zuordnung</option>
-        <option value="abgeholt">Abgeholt</option>
-        <option value="archiviert">Archiviert</option>
-        <option value="alle">Alle Status</option>
+        <option value="aktiv"${f.status === "aktiv" ? " selected" : ""}>Aktiv (offen)</option>
+        <option value="offen"${f.status === "offen" ? " selected" : ""}>Offen</option>
+        <option value="in_abwicklung"${f.status === "in_abwicklung" ? " selected" : ""}>In Zuordnung</option>
+        <option value="abgeholt"${f.status === "abgeholt" ? " selected" : ""}>Abgeholt</option>
+        <option value="archiviert"${f.status === "archiviert" ? " selected" : ""}>Archiviert</option>
+        <option value="alle"${f.status === "alle" ? " selected" : ""}>Alle Status</option>
       </select>
       <select id="f-cat" aria-label="Kategorie filtern">
-        <option value="alle">Alle Kategorien</option>
-        ${CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join("")}
+        <option value="alle"${f.cat === "alle" ? " selected" : ""}>Alle Kategorien</option>
+        ${CATEGORIES.map(c => `<option value="${c.id}"${f.cat === c.id ? " selected" : ""}>${c.label}</option>`).join("")}
       </select>
       <select id="f-loc" aria-label="Ort filtern">
-        <option value="alle">Alle Orte</option>
-        ${LOCATIONS.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join("")}
+        <option value="alle"${f.loc === "alle" ? " selected" : ""}>Alle Orte</option>
+        ${LOCATIONS.map(l => `<option value="${escapeHtml(l)}"${f.loc === l ? " selected" : ""}>${escapeHtml(l)}</option>`).join("")}
       </select>
     </div>
     <div id="item-grid-wrap">${items.length ? `<div class="item-grid">${items.map(itemCard).join("")}</div>` : emptyHtml("list")}</div>
@@ -1236,25 +1240,30 @@ function refreshList() {
 function bindEvents() {
   document.addEventListener("click", e => {
     const el = e.target.closest ? e.target.closest("[data-action]") : null;
-    if (!el) return;
-    const a = el.dataset.action;
-    switch (a) {
-      case "nav": setView(el.dataset.view); break;
-      case "nav-close": closeModal(); setView(el.dataset.view); break;
-      case "home": setView("start"); break;
-      case "toggle-menu": toggleMenu(el); break;
-      case "open-item": openItem(el.dataset.id); break;
-      case "close-modal": closeModal(); break;
-      case "link-items": linkItems(el.dataset.a, el.dataset.b); break;
-      case "mark-retrieved": markRetrieved(el.dataset.id); break;
-      case "archive-item": archiveItem(el.dataset.id); break;
-      case "delete-item": deleteItem(el.dataset.id); break;
-      case "export-data": exportData(); break;
-      case "import-data": { const i = document.getElementById("import-file"); if (i) i.click(); break; }
-      case "retry-load": retryLoad(); break;
-      case "reset-data": resetData(); break;
-      case "pick-photo": { const i = document.getElementById("photo-input"); if (i) i.click(); break; }
-      case "clear-photo": clearPhoto(); break;
+    if (el) {
+      const a = el.dataset.action;
+      switch (a) {
+        case "nav": setView(el.dataset.view); return;
+        case "nav-close": closeModal(); setView(el.dataset.view); return;
+        case "home": setView("start"); return;
+        case "toggle-menu": toggleMenu(el); return;
+        case "open-item": openItem(el.dataset.id); return;
+        case "close-modal": closeModal(); return;
+        case "link-items": linkItems(el.dataset.a, el.dataset.b); return;
+        case "mark-retrieved": markRetrieved(el.dataset.id); return;
+        case "archive-item": archiveItem(el.dataset.id); return;
+        case "delete-item": deleteItem(el.dataset.id); return;
+        case "export-data": exportData(); return;
+        case "import-data": { const i = document.getElementById("import-file"); if (i) i.click(); return; }
+        case "retry-load": retryLoad(); return;
+        case "reset-data": resetData(); return;
+        case "pick-photo": { const i = document.getElementById("photo-input"); if (i) i.click(); return; }
+        case "clear-photo": clearPhoto(); return;
+      }
+    }
+    const viewEl = e.target.closest ? e.target.closest("[data-view]") : null;
+    if (viewEl && viewEl.dataset && viewEl.dataset.view) {
+      setView(viewEl.dataset.view);
     }
   });
 
@@ -1294,10 +1303,20 @@ function bindEvents() {
 
   document.addEventListener("keydown", e => {
     if (e.key === "Escape" && !document.getElementById("modal").hidden) closeModal();
-    // Karten auch per Enter/Leertaste öffnen
-    if ((e.key === "Enter" || e.key === " ") && e.target.classList && e.target.classList.contains("item-card")) {
-      e.preventDefault();
-      openItem(e.target.dataset.id);
+    // Interaktive Elemente (Karten, role=button) per Enter/Leertaste auslösen
+    if (e.key === "Enter" || e.key === " ") {
+      const isCard = e.target.classList && e.target.classList.contains && e.target.classList.contains("item-card");
+      const card = isCard ? e.target : (e.target.closest ? e.target.closest(".item-card, .recent-item") : null);
+      if (card && card.dataset && card.dataset.id) {
+        if (e.preventDefault) e.preventDefault();
+        openItem(card.dataset.id);
+        return;
+      }
+      const btn = e.target.closest ? e.target.closest('[role="button"]') : null;
+      if (btn && btn.tagName !== "BUTTON" && btn.tagName !== "INPUT") {
+        if (e.preventDefault) e.preventDefault();
+        btn.click();
+      }
     }
   });
 }
