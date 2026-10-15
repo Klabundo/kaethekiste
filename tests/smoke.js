@@ -301,7 +301,7 @@ async function main() {
   check("Foto im Storage gespeichert", store.storage.has("fotos/foto-test-1.jpg"));
 
   console.log("\n-- Formular-Submit (neuer Eintrag) --");
-  const fakeForm = makeFakeForm({ title: "Test-Flasche Wasser", category: "flasche", location: "Mensa / Cafeteria", date: "2026-10-10", reporter: "Test T. (9c)", contact: "Abgabe: Sekretariat" });
+  const fakeForm = makeFakeForm({ title: "Test-Flasche Wasser", category: "flasche", location: "Mensa / Cafeteria", date: "2026-10-10", reporter: "Test T. (9.3)", contact: "Abgabe: Sekretariat" });
   await api.handleFormSubmit(fakeForm);
   check("neuer Eintrag in DB", store.fundsachen.length === 18, "rows=" + store.fundsachen.length);
   check("neuer Eintrag im State", api.state.items.some(i => i.title === "Test-Flasche Wasser"));

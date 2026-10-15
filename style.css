@@ -392,10 +392,12 @@ main > .card:first-child { margin-top: 0; }
   aspect-ratio: 16 / 10;
   background: var(--photo-bg);
   border-bottom: 1px solid var(--line);
-  display: grid; place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
-.item-card__photo img { width: 100%; height: 100%; object-fit: cover; }
+.item-card__photo img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
 .ph-empty {
   padding: 14px;
   text-align: center;
@@ -723,9 +725,9 @@ main > .card:first-child { margin-top: 0; }
 .modal-panel {
   position: relative;
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  width: min(860px, 100%);
-  max-height: min(84vh, 760px);
+  grid-template-columns: 320px minmax(0, 1fr);
+  width: min(880px, 100%);
+  max-height: min(88vh, 760px);
   background: var(--surface);
   border-radius: 12px;
   overflow: hidden;
@@ -736,10 +738,28 @@ main > .card:first-child { margin-top: 0; }
 .modal-panel__photo {
   background: var(--photo-bg);
   border-right: 1px solid var(--line);
-  display: grid; place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
+  position: relative;
+  min-height: 240px;
 }
-.modal-panel__photo img { width: 100%; height: 100%; object-fit: cover; }
+.modal-photo-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+}
+.modal-panel__photo img {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  padding: 12px;
+}
 .modal-panel__body {
   padding: 24px 28px;
   overflow-y: auto;
@@ -898,7 +918,7 @@ main > .card:first-child { margin-top: 0; }
   .hero { padding: 40px 30px; }
   .modal-panel { grid-template-columns: 1fr; max-height: 88vh; }
   .modal-panel__photo {
-    height: 180px;
+    height: 260px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }

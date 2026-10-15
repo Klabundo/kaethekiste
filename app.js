@@ -811,11 +811,11 @@ function viewForm(type) {
 
         <div class="field">
           <label for="f-reporter">Dein Name / Klasse</label>
-          <input name="reporter" id="f-reporter" maxlength="60" placeholder="${isFound ? "z.&nbsp;B. „Mira, 8c“ – bleibt intern" : "z.&nbsp;B. „Sami K. (9a)“"}">
+          <input name="reporter" id="f-reporter" maxlength="60" placeholder="${isFound ? "z.&nbsp;B. „Mira, 8.3“ – bleibt intern" : "z.&nbsp;B. „Sami K. (9.1)“"}">
         </div>
         <div class="field">
           <label for="f-contact">${isFound ? "Weiterleitung an <span class=\"req\">*</span>" : "Rückmeldung"}</label>
-          <input name="contact" id="f-contact" ${isFound ? "required" : ""} maxlength="80" placeholder="${isFound ? "z.&nbsp;B. „Lehrkraft H. Weber“ oder „Schülerin:in 9b, Platz 12“" : "z.&nbsp;B. „per E-Mail an Klassenlehrkraft“"}">
+          <input name="contact" id="f-contact" ${isFound ? "required" : ""} maxlength="80" placeholder="${isFound ? "z.&nbsp;B. „Lehrkraft H. Weber“ oder „Schüler:in 9.2, Platz 12“" : "z.&nbsp;B. „per E-Mail an Klassenlehrkraft“"}">
           ${isFound ? `<span class="hint">Wohin der Fund gebracht wird (z.&nbsp;B. Sekretariat, Lehrkraft) – nicht deine private Handynummer.</span>` : ""}
         </div>
 
@@ -1059,7 +1059,7 @@ function openItem(id) {
   const matched = item.matchedWith ? state.items.find(i => i.id === item.matchedWith) : null;
   const matches = (!matched && ACTIVE_STATUSES.includes(item.status)) ? findMatches(item) : [];
   const photoHtml = item.photo
-    ? `<img src="${item.photo}" alt="">`
+    ? `<a href="${escapeHtml(item.photo)}" target="_blank" rel="noopener noreferrer" class="modal-photo-link" title="Foto in voller Größe in neuem Tab öffnen"><img src="${escapeHtml(item.photo)}" alt="${escapeHtml(item.title)}"></a>`
     : photoPlaceholder(item.category);
 
   const timeline = (item.events || []).slice().reverse().map((ev, i) =>
@@ -1424,35 +1424,35 @@ function sampleItems() {
   const items = [];
 
   // iPhone-Paar: zugeordnet, Abholung steht aus
-  const ipF = mk("found", 3, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000001.jpg", title: "Weißes iPhone 14 mit Stern-Hülle", category: "handy", color: "Weiß", location: "Flur 1. OG", reporter: "Lena M. (9b)", contact: "Abgabe: Sekretariat", description: "Im Briefkasten des 1. OG gefunden. Gehäuse weiß, Hülle mit kleinen Sternen, Code gesperrt." });
-  const ipL = mk("lost", 2, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000002.jpg", title: "iPhone 14, weiß, Stern-Hülle", category: "handy", color: "Weiß", location: "Flur 1. OG", reporter: "Sami K. (9a)", description: "iPhone 14 weiß, Hülle mit kleinen Sternen. Bitte dringend!" });
+  const ipF = mk("found", 3, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000001.jpg", title: "Weißes iPhone 14 mit Stern-Hülle", category: "handy", color: "Weiß", location: "Flur 1. OG", reporter: "Lena M. (9.2)", contact: "Abgabe: Sekretariat", description: "Im Briefkasten des 1. OG gefunden. Gehäuse weiß, Hülle mit kleinen Sternen, Code gesperrt." });
+  const ipL = mk("lost", 2, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000002.jpg", title: "iPhone 14, weiß, Stern-Hülle", category: "handy", color: "Weiß", location: "Flur 1. OG", reporter: "Sami K. (9.1)", description: "iPhone 14 weiß, Hülle mit kleinen Sternen. Bitte dringend!" });
   linkPair(ipF, ipL, 1, null);
   items.push(ipF, ipL);
 
   // Puma-Jacke: abgeschlossen
-  const jkF = mk("found", 6, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000003.jpg", title: "Schwarze Puma-Jacke, Größe M", category: "kleidung", brand: "Puma", color: "Schwarz", location: "Turnhalle / Sporthalle", reporter: "Tom R. (10a)", contact: "Abgabe: Sekretariat", description: "Schwarze Puma-Trainingsjacke Größe M, lag auf der Bank in der Sporthalle." });
-  const jkL = mk("lost", 5, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000004.jpg", title: "Puma-Jacke, schwarz, Größe M", category: "kleidung", brand: "Puma", color: "Schwarz", location: "Turnhalle / Sporthalle", reporter: "Ela B. (10b)", description: "Nach dem Sport die Puma-Jacke verloren, schwarz, Größe M." });
+  const jkF = mk("found", 6, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000003.jpg", title: "Schwarze Puma-Jacke, Größe M", category: "kleidung", brand: "Puma", color: "Schwarz", location: "Turnhalle / Sporthalle", reporter: "Tom R. (10.1)", contact: "Abgabe: Sekretariat", description: "Schwarze Puma-Trainingsjacke Größe M, lag auf der Bank in der Sporthalle." });
+  const jkL = mk("lost", 5, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000004.jpg", title: "Puma-Jacke, schwarz, Größe M", category: "kleidung", brand: "Puma", color: "Schwarz", location: "Turnhalle / Sporthalle", reporter: "Ela B. (10.2)", description: "Nach dem Sport die Puma-Jacke verloren, schwarz, Größe M." });
   linkPair(jkF, jkL, 4, 2);
   items.push(jkF, jkL);
 
   // Stifte-Set: abgeschlossen
-  const stF = mk("found", 9, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000005.jpg", title: "Grünes Stifte-Set (5×)", category: "stifte", color: "Grün", location: "Flur 2. OG", reporter: "Mira S. (7c)", contact: "Abgabe: Sekretariat", description: "Fünf grüne Kugelschreiber in einer kleinen Schachtel." });
-  const stL = mk("lost", 8, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000006.jpg", title: "Fünf grüne Kugelschreiber", category: "stifte", color: "Grün", location: "Flur 2. OG", reporter: "Ben H. (7a)", description: "Ganzes Stifte-Set (5×) verloren, alle grün." });
+  const stF = mk("found", 9, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000005.jpg", title: "Grünes Stifte-Set (5×)", category: "stifte", color: "Grün", location: "Flur 2. OG", reporter: "Mira S. (7.3)", contact: "Abgabe: Sekretariat", description: "Fünf grüne Kugelschreiber in einer kleinen Schachtel." });
+  const stL = mk("lost", 8, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000006.jpg", title: "Fünf grüne Kugelschreiber", category: "stifte", color: "Grün", location: "Flur 2. OG", reporter: "Ben H. (7.1)", description: "Ganzes Stifte-Set (5×) verloren, alle grün." });
   linkPair(stF, stL, 7, 5);
   items.push(stF, stL);
 
   // Offene Einzel-Einträge (noch kein passender Gegenpart)
   items.push(
-    mk("found", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000007.jpg", title: "Casio-Rechner fx-991EX", category: "rechner", brand: "Casio", color: "Schwarz", location: "Kopierraum", reporter: "Jonas P. (12c)", contact: "Abgabe: Sekretariat", description: "Lag auf dem Tisch im Kopierraum, Casio fx-991EX." }),
-    mk("found", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000008.jpg", title: "Rote Lunchbox mit Katzen-Aufkleber", category: "essen", color: "Rot", location: "Mensa / Cafeteria", reporter: "Mila T. (6c)", contact: "Abgabe: Cafeteria", description: "Rote Lunchbox, leer, mit Katzen-Aufkleber." }),
+    mk("found", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000007.jpg", title: "Casio-Rechner fx-991EX", category: "rechner", brand: "Casio", color: "Schwarz", location: "Kopierraum", reporter: "Jonas P. (12.3)", contact: "Abgabe: Sekretariat", description: "Lag auf dem Tisch im Kopierraum, Casio fx-991EX." }),
+    mk("found", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000008.jpg", title: "Rote Lunchbox mit Katzen-Aufkleber", category: "essen", color: "Rot", location: "Mensa / Cafeteria", reporter: "Mila T. (6.3)", contact: "Abgabe: Cafeteria", description: "Rote Lunchbox, leer, mit Katzen-Aufkleber." }),
     mk("found", 4, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000009.jpg", title: "Blauer Rucksack, voll mit Büchern", category: "nichting", color: "Blau", location: "Pausenhof", reporter: "anonym", contact: "Abgabe: Sekretariat", description: "Blaue Schultasche, voll mit Büchern, am Zaun im Pausenhof gefunden." }),
-    mk("found", 2, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000c.jpg", title: "Schlüsselbund mit gelbem Hund-Anhänger", category: "schluessel", color: "Gelb", location: "Briefkasten 1. OG", reporter: "Jonas P. (12c)", contact: "Abgabe: Sekretariat", description: "Schlüssel mit gelbem Hund-Charms, lag in einem Briefkasten im 1. OG." }),
+    mk("found", 2, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000c.jpg", title: "Schlüsselbund mit gelbem Hund-Anhänger", category: "schluessel", color: "Gelb", location: "Briefkasten 1. OG", reporter: "Jonas P. (12.3)", contact: "Abgabe: Sekretariat", description: "Schlüssel mit gelbem Hund-Charms, lag in einem Briefkasten im 1. OG." }),
     mk("found", 5, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000d.jpg", title: "Taschenbuch „Der kleine Prinz“", category: "buecher", location: "Bibliothek", reporter: "Frau Brandt", contact: "Abgabe: Bibliothek", description: "Taschenbuch, lag auf einem Sitzplatz in der Bibliothek." }),
-    mk("lost", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000a.jpg", title: "Schülerausweis, Elena Berger (11a)", category: "ausweis", location: "Mensa / Cafeteria", reporter: "Elena B. (11a)", description: "Schülerausweis verloren, Name: Elena Berger, 11a. Bitte melden!" }),
-    mk("lost", 2, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000b.jpg", title: "Grüne Thermosflasche", category: "flasche", color: "Grün", location: "Mensa / Cafeteria", reporter: "Nora F. (8b)", description: "Grüne Thermosflasche, vermutlich in der Mensa, mit Gravur „N.F.“." }),
-    mk("lost", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000f.jpg", title: "Weiße AirPods Pro im Ladeetui", category: "kopfhörer", color: "Weiß", location: "Musiksaal", reporter: "Jule H. (11c)", description: "AirPods Pro im weißen Etui, vermutlich im Musiksaal verloren." }),
-    mk("lost", 3, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000010.jpg", title: "Grünes Matheheft (9c)", category: "hefte", color: "Grün", location: "Raum 9c", reporter: "Max W. (9c)", description: "Grünes Matheheft mit Stempeln, im Klassenzimmer 9c vergessen." }),
-    mk("lost", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000011.jpg", title: "Schwarzer Regenschirm", location: "Pausenhof", reporter: "Finn G. (8a)", description: "Schwarzer Regenschirm, nach dem Regen im Pausenhof vergessen." }),
+    mk("lost", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000a.jpg", title: "Schülerausweis, Elena Berger (11.1)", category: "ausweis", location: "Mensa / Cafeteria", reporter: "Elena B. (11.1)", description: "Schülerausweis verloren, Name: Elena Berger, 11.1. Bitte melden!" }),
+    mk("lost", 2, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000b.jpg", title: "Grüne Thermosflasche", category: "flasche", color: "Grün", location: "Mensa / Cafeteria", reporter: "Nora F. (8.2)", description: "Grüne Thermosflasche, vermutlich in der Mensa, mit Gravur „N.F.“." }),
+    mk("lost", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-00000000000f.jpg", title: "Weiße AirPods Pro im Ladeetui", category: "kopfhörer", color: "Weiß", location: "Musiksaal", reporter: "Jule H. (11.3)", description: "AirPods Pro im weißen Etui, vermutlich im Musiksaal verloren." }),
+    mk("lost", 3, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000010.jpg", title: "Grünes Matheheft (9.3)", category: "hefte", color: "Grün", location: "Raum 9.3", reporter: "Max W. (9.3)", description: "Grünes Matheheft mit Stempeln, im Klassenzimmer 9.3 vergessen." }),
+    mk("lost", 1, { photo: FOTO_BASE + "a0000000-0000-4000-8000-000000000011.jpg", title: "Schwarzer Regenschirm", location: "Pausenhof", reporter: "Finn G. (8.1)", description: "Schwarzer Regenschirm, nach dem Regen im Pausenhof vergessen." }),
   );
 
   // Archiviert: älterer Fund, nach zwei Wochen ohne Abholung
