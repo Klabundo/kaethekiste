@@ -175,11 +175,11 @@ vm.createContext(sandbox);
 const code = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 const exportLine = `
 ;globalThis.__api = { state, findMatches, sampleItems, matchScore, applyFilters,
-  normalize, tokenize, jaccard, viewStart, viewList, viewForm, viewStats, viewHelp,
+  normalize, tokenize, jaccard, viewStart, viewList, viewArchive, viewForm, viewStats, viewHelp,
   itemCard, setView, STATUS, ACTIVE_STATUSES,
   loadItems, subscribeRealtime, retryLoad, uploadPhoto, removePhoto,
   handleFormSubmit, handleImport, linkItems, markRetrieved,
-  archiveItem, deleteItem, resetData, rowToItem, itemToRow,
+  archiveItem, restoreItem, deleteItem, resetData, rowToItem, itemToRow,
   TBL_ITEMS, TBL_LINKS, BUCKET_FOTOS };
 `;
 vm.runInContext(code + exportLine, sandbox);
@@ -249,11 +249,13 @@ const htmls = {
   liste: api.viewList(),
   formLost: api.viewForm("lost"),
   formFound: api.viewForm("found"),
+  archiv: api.viewArchive(),
   statistik: api.viewStats(),
   hilfe: api.viewHelp(),
 };
 check("Startansicht rendert (ohne Onboarding-Panel)", htmls.start.includes("Das Fundsachen-System der Schule.") && htmls.start.includes("hero") && !htmls.start.includes("So funktioniert’s"));
 check("Liste rendert mit Karten", htmls.liste.includes("item-card") && htmls.liste.includes("count-pill"));
+check("Archiv rendert mit Karten", htmls.archiv.includes("Archivierte Fundsachen") && htmls.archiv.includes("count-pill"));
 check("Verlust-Formular rendert", htmls.formLost.includes('id="form-lost"'));
 check("Fund-Formular rendert mit Pflichtfeld Kontakt", htmls.formFound.includes('id="form-found"') && htmls.formFound.includes("required"));
 check("Statistik rendert (Balken)", htmls.statistik.includes("bar-fill"));
@@ -306,6 +308,16 @@ async function main() {
   await api.markRetrieved(thermo.id);
   check("beide abgeholt (State)", thermo.status === "abgeholt" && lunch.status === "abgeholt");
   check("Abholung in DB + Event", store.fundsachen.find(r => r.id === lunch.id).status === "abgeholt" && store.fundsachen.find(r => r.id === lunch.id).events.some(e => /Abholung/i.test(e.text)));
+
+  console.log("\n-- Archivieren & Wiederherstellen --");
+  const muetze = api.state.items.find(i => /mütze|muetze/i.test(i.title) && i.status === "archiviert");
+  check("Archivierter Eintrag in Beispieldaten", !!muetze);
+  await api.restoreItem(muetze.id);
+  check("Wiederherstellen setzt Status auf offen (State)", muetze.status === "offen");
+  check("Wiederherstellen setzt Status auf offen (DB)", store.fundsachen.find(r => r.id === muetze.id).status === "offen");
+  await api.archiveItem(muetze.id);
+  check("Archivieren setzt Status auf archiviert (State)", muetze.status === "archiviert");
+  check("Archivieren setzt Status auf archiviert (DB)", store.fundsachen.find(r => r.id === muetze.id).status === "archiviert");
 
   console.log("\n-- Löschen --");
   await api.deleteItem(lunch.id);

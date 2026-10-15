@@ -226,13 +226,94 @@ function normalize(s) {
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ").trim();
 }
+
+function stem(w) {
+  if (w.length <= 3) return w;
+  return w
+    .replace(/(?:innen|ung|heit|keit|lich|isch|bar)$/, "")
+    .replace(/(?:ern|est|end)$/, "")
+    .replace(/(?:en|er|es|em|el)$/, "")
+    .replace(/(?:e|s|t)$/, "");
+}
+
 const STOPWORDS = new Set(["und", "der", "die", "das", "ein", "eine", "einen", "einem", "des",
   "den", "mit", "von", "im", "in", "am", "auf", "zu", "ich", "meine", "mein", "meiner",
-  "wird", "wurde", "habe", "hat", "ist", "war", "nicht", "etwas", "bitte"]);
+  "wird", "wurde", "habe", "hat", "ist", "war", "nicht", "etwas", "bitte", "beim", "beiden",
+  "fuer", "ueber", "nach", "vor", "bei", "oder", "aber", "wenn", "dann", "sehr", "ganz"]);
+
+const SYNONYM_GROUPS = [
+  ["handy", "smartphone", "iphone", "samsung", "pixel", "natel", "mobiltelefon", "telefon", "cellular"],
+  ["airpod", "airpods", "kopfhoerer", "earbud", "earbuds", "in-ear", "inears", "headset", "headphones"],
+  ["kuli", "kugelschreiber", "stift", "schreibstift", "fineliner", "tintenroller", "bleistift", "marker", "filzstift"],
+  ["matheheft", "schulheft", "heft", "notizheft", "notizbuch", "block", "collegeblock", "kladde"],
+  ["buch", "taschenbuch", "schulbuch", "lehrbuch", "roman", "lesebuch"],
+  ["thermosflasche", "thermoskanne", "trinkflasche", "wasserflasche", "flasche", "thermos", "isolierflasche", "thermosbecher"],
+  ["lunchbox", "brotdose", "vesperdose", "bento", "bentobox", "vesperbox", "pausendose", "dose"],
+  ["rucksack", "schultasche", "schulranzen", "ranzen", "turnbeutel", "sportbeutel", "sporttasche", "bag", "tasche"],
+  ["jacke", "trainingsjacke", "zipper", "sweatjacke", "anorak", "windbreaker", "hoodie", "sportjacke"],
+  ["muetze", "wollmuetze", "beanie", "bommelmuetze", "kappe", "cap", "strickmuetze"],
+  ["regenschirm", "schirm", "taschenschirm", "knirps"],
+  ["schluessel", "schluesselbund", "hausschluessel", "anhaenger", "keychain", "schluesselring"],
+  ["ausweis", "schuelerausweis", "fahrkarte", "monatskarte", "ticket", "schuelerkarte"],
+  ["taschenrechner", "rechner", "casio", "ti", "calculator"]
+];
+
+const SYNONYM_MAP = new Map();
+SYNONYM_GROUPS.forEach(group => {
+  const root = group[0];
+  group.forEach(word => {
+    SYNONYM_MAP.set(word, root);
+    SYNONYM_MAP.set(stem(word), root);
+  });
+});
+
+const KNOWN_COLORS = ["schwarz", "weiss", "grau", "blau", "gruen", "rot", "gelb", "orange", "pink", "rosa", "lila", "violett", "braun", "bunt", "silber", "gold"];
+const KNOWN_BRANDS = ["puma", "nike", "adidas", "casio", "apple", "samsung", "eastpak", "satch", "ergobag", "klett", "duden", "stabilo", "faber", "lamy", "brunnen", "oxford"];
+
+function extractAttributes(item) {
+  const text = normalize([item.title, item.description, item.brand, item.color].join(" "));
+  const words = text.split(" ");
+  let color = normalize(item.color || "");
+  let brand = normalize(item.brand || "");
+  
+  if (!color) {
+    for (const c of KNOWN_COLORS) {
+      if (words.includes(c) || text.includes(c)) { color = c; break; }
+    }
+  }
+  if (!brand) {
+    for (const b of KNOWN_BRANDS) {
+      if (words.includes(b) || text.includes(b)) { brand = b; break; }
+    }
+  }
+  return { color, brand };
+}
 
 function tokenize(s) {
-  return normalize(s).split(" ").filter(w => w.length > 2 && !STOPWORDS.has(w));
+  const rawWords = normalize(s).split(" ").filter(w => w.length > 2 && !STOPWORDS.has(w));
+  const tokens = new Set();
+  
+  for (const raw of rawWords) {
+    tokens.add(raw);
+    const st = stem(raw);
+    if (st.length > 2) tokens.add(st);
+    
+    const syn = SYNONYM_MAP.get(raw) || SYNONYM_MAP.get(st);
+    if (syn) tokens.add("__syn_" + syn);
+    
+    // Sub-token / Komposita-Erkennung (z. B. "sternhuelle", "pumajacke")
+    if (raw.length >= 7) {
+      for (const [key, synRoot] of SYNONYM_MAP.entries()) {
+        if (key.length >= 4 && raw.includes(key)) {
+          tokens.add(key);
+          tokens.add("__syn_" + synRoot);
+        }
+      }
+    }
+  }
+  return Array.from(tokens);
 }
+
 function jaccard(a, b) {
   const ta = new Set(tokenize(a)), tb = new Set(tokenize(b));
   if (!ta.size || !tb.size) return 0;
@@ -240,17 +321,83 @@ function jaccard(a, b) {
   for (const w of ta) if (tb.has(w)) inter++;
   return inter / (ta.size + tb.size - inter);
 }
+
 function itemText(item) {
   return [item.title, item.brand, item.color, item.description].filter(Boolean).join(" ");
 }
+
+const INCOMPATIBLE_CATEGORIES = new Set([
+  "handy|kleidung", "kleidung|handy",
+  "handy|ausweis", "ausweis|handy",
+  "handy|essen", "essen|handy",
+  "handy|flasche", "flasche|handy",
+  "ausweis|kleidung", "kleidung|ausweis",
+  "ausweis|essen", "essen|ausweis",
+  "ausweis|flasche", "flasche|ausweis",
+  "ausweis|rechner", "rechner|ausweis",
+  "rechner|kleidung", "kleidung|rechner",
+  "rechner|essen", "essen|rechner",
+  "rechner|flasche", "flasche|rechner"
+]);
+
 function matchScore(a, b) {
+  const catA = a.category || "sonstiges";
+  const catB = b.category || "sonstiges";
+  if (catA !== "sonstiges" && catB !== "sonstiges" && catA !== catB) {
+    if (INCOMPATIBLE_CATEGORIES.has(`${catA}|${catB}`)) {
+      return 0; // Völlig inkompatible Kategorien ausschließen
+    }
+  }
+
   let s = jaccard(itemText(a), itemText(b));
-  if (a.category && a.category === b.category) s += 0.30;
-  if (a.brand && a.brand && a.brand === b.brand) s += 0.20;
-  if (a.color && a.color && a.color === b.color) s += 0.10;
-  if (a.location === b.location) s += 0.05;
-  return Math.min(1, s);
+
+  // Kategorie-Bonus
+  if (catA === catB && catA !== "sonstiges") {
+    s += 0.30;
+  }
+
+  // Attribut-Abgleich (auch aus Text extrahiert)
+  const attrA = extractAttributes(a);
+  const attrB = extractAttributes(b);
+  if (attrA.brand && attrB.brand && attrA.brand === attrB.brand) {
+    s += 0.20;
+  }
+  if (attrA.color && attrB.color && attrA.color === attrB.color) {
+    s += 0.12;
+  }
+
+  // Ort-Abgleich
+  if (a.location && b.location) {
+    if (a.location === b.location) {
+      s += 0.08;
+    } else {
+      const locA = normalize(a.location);
+      const locB = normalize(b.location);
+      if (locA.includes("flur") && locB.includes("flur")) s += 0.04;
+      else if (locA.includes("mensa") && locB.includes("mensa")) s += 0.04;
+      else if (locA.includes("hof") && locB.includes("hof")) s += 0.04;
+    }
+  }
+
+  // Zeitliche Plausibilität
+  if (a.date && b.date) {
+    const lostItem = a.type === "lost" ? a : (b.type === "lost" ? b : null);
+    const foundItem = a.type === "found" ? a : (b.type === "found" ? b : null);
+    if (lostItem && foundItem) {
+      const diffDays = (foundItem.date - lostItem.date) / 864e5;
+      if (diffDays < -2) {
+        // Deutlich vor Verlust gefunden -> unplausibel
+        s -= 0.30;
+      } else if (diffDays >= 0 && diffDays <= 3) {
+        // Innerhalb von 3 Tagen nach Verlust gefunden -> temporal boost
+        s += 0.08;
+      }
+    }
+  }
+
+  return Math.max(0, Math.min(1, s));
 }
+
 function findMatches(item, limit = 3, minScore = 0.35) {
   return state.items
     .filter(o => o.id !== item.id && o.type !== item.type && ACTIVE_STATUSES.includes(o.status))
@@ -294,7 +441,11 @@ function toast(msg, type = "") {
 /* ---------------- Routing & Rendering ---------------- */
 function setView(view) {
   state.view = view;
-  if (view === "start" || view === "statistik" || view === "hilfe") state.filters = { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" };
+  if (view === "start" || view === "statistik" || view === "hilfe") {
+    state.filters = { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" };
+  } else if (view === "archiv") {
+    state.filters = { q: "", type: "alle", status: "archiviert", cat: "alle", loc: "alle" };
+  }
   const navMobile = document.getElementById("nav-mobile");
   if (navMobile) navMobile.hidden = true;
   const toggleBtn = document.querySelector('[data-action="toggle-menu"]');
@@ -316,6 +467,7 @@ function render() {
   main.innerHTML = banner +
     (v === "start" ? viewStart() :
     v === "liste" ? viewList() :
+    v === "archiv" ? viewArchive() :
     v === "form-lost" ? viewForm("lost") :
     v === "form-found" ? viewForm("found") :
     v === "statistik" ? viewStats() :
@@ -324,13 +476,15 @@ function render() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function applyFilters(items) {
+function applyFilters(items, ignoreStatus = false) {
   const f = state.filters;
   const q = normalize(f.q);
   return items.filter(i => {
     if (f.type !== "alle" && i.type !== f.type) return false;
-    if (f.status === "aktiv") { if (!ACTIVE_STATUSES.includes(i.status)) return false; }
-    else if (f.status !== "alle" && i.status !== f.status) return false;
+    if (!ignoreStatus) {
+      if (f.status === "aktiv") { if (!ACTIVE_STATUSES.includes(i.status)) return false; }
+      else if (f.status !== "alle" && i.status !== f.status) return false;
+    }
     if (f.cat !== "alle" && i.category !== f.cat) return false;
     if (f.loc !== "alle" && i.location !== f.loc) return false;
     if (q) {
@@ -405,6 +559,15 @@ function dropzoneHtml() {
 }
 
 function emptyHtml(kind) {
+  if (kind === "archive") {
+    return `<div class="empty">
+      <h3 class="empty-title">Keine archivierten Einträge</h3>
+      <p>Es befinden sich zurzeit keine Fundsachen im Archiv (oder die Filter liefern keine Treffer).</p>
+      <div class="empty-actions">
+        <button class="btn btn--primary" data-action="nav" data-view="liste">Zur Fundsachen-Liste</button>
+      </div>
+    </div>`;
+  }
   if (kind === "list") {
     return `<div class="empty">
       <h3 class="empty-title">Keine Einträge gefunden</h3>
@@ -431,6 +594,7 @@ function viewStart() {
   const found = active.filter(i => i.type === "found").length;
   const lost = active.length - found;
   const solved = state.items.filter(i => i.status === "abgeholt").length;
+  const archived = state.items.filter(i => i.status === "archiviert").length;
   const recent = active.slice().sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
   return `
   <div class="hero">
@@ -448,7 +612,7 @@ function viewStart() {
     <div class="stat"><div class="num">${found}</div><div class="lbl">Funde offen</div><div class="hint">warten auf Eigentümer:in</div></div>
     <div class="stat"><div class="num">${lost}</div><div class="lbl">Verluste offen</div><div class="hint">werden aktiv gesucht</div></div>
     <div class="stat"><div class="num">${solved}</div><div class="lbl">Erfolgreich gelöst</div><div class="hint">seit Einrichtung</div></div>
-    <div class="stat"><div class="num">${state.items.length}</div><div class="lbl">Einträge gesamt</div><div class="hint">inkl. Archiv</div></div>
+    <div class="stat" data-action="nav" data-view="archiv" role="button" tabindex="0" title="Zum Archiv" style="cursor:pointer;"><div class="num">${archived}</div><div class="lbl">Im Archiv</div><div class="hint">ältere Einträge ansehen →</div></div>
   </div>
 
   <section class="card">
@@ -467,6 +631,7 @@ function viewStart() {
 function viewList() {
   const items = applyFilters(state.items);
   const f = state.filters;
+  const archivedCount = state.items.filter(i => i.status === "archiviert").length;
   return `
   <section class="card">
     <div class="section-head">
@@ -474,7 +639,10 @@ function viewList() {
         <h2 class="section-title">Alle Fundsachen</h2>
         <p class="section-sub">Verlorenes und Gefundenes der Schule – durchsuchen, filtern und im Detail vergleichen.</p>
       </div>
-      <span class="count-pill" id="count-pill">${items.length} Treffer</span>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span class="count-pill" id="count-pill">${items.length} Treffer</span>
+        <button class="btn btn--outline btn--sm" data-action="nav" data-view="archiv" title="Zum Archiv wechseln">${icon("archive", 14)} Archiv (${archivedCount})</button>
+      </div>
     </div>
     <div class="toolbar">
       <label class="search">${icon("search", 15)}
@@ -503,6 +671,45 @@ function viewList() {
       </select>
     </div>
     <div id="item-grid-wrap">${items.length ? `<div class="item-grid">${items.map(itemCard).join("")}</div>` : emptyHtml("list")}</div>
+  </section>`;
+}
+
+/* ---------------- Ansicht: Archiv ---------------- */
+function viewArchive() {
+  const f = state.filters;
+  const archivedItems = state.items.filter(i => i.status === "archiviert");
+  const items = applyFilters(archivedItems, true);
+  return `
+  <section class="card">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title">${icon("archive", 20)} Archivierte Fundsachen</h2>
+        <p class="section-sub">Gegenstände, die nach längerer Aufbewahrung oder Klärung archiviert wurden. Einträge können eingesehen, wiederhergestellt oder gelöscht werden.</p>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span class="count-pill" id="count-pill">${items.length} archiviert</span>
+        <button class="btn btn--outline btn--sm" data-action="nav" data-view="liste">Zurück zu den Fundsachen</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <label class="search">${icon("search", 15)}
+        <input id="f-q" placeholder="Im Archiv suchen: z.&nbsp;B. „Mütze“, „Aula“ …" value="${escapeHtml(f.q)}" autocomplete="off">
+      </label>
+      <select id="f-type" aria-label="Art filtern">
+        <option value="alle"${f.type === "alle" ? " selected" : ""}>Alle</option>
+        <option value="found"${f.type === "found" ? " selected" : ""}>Gefunden</option>
+        <option value="lost"${f.type === "lost" ? " selected" : ""}>Verloren</option>
+      </select>
+      <select id="f-cat" aria-label="Kategorie filtern">
+        <option value="alle"${f.cat === "alle" ? " selected" : ""}>Alle Kategorien</option>
+        ${CATEGORIES.map(c => `<option value="${c.id}"${f.cat === c.id ? " selected" : ""}>${c.label}</option>`).join("")}
+      </select>
+      <select id="f-loc" aria-label="Ort filtern">
+        <option value="alle"${f.loc === "alle" ? " selected" : ""}>Alle Orte</option>
+        ${LOCATIONS.map(l => `<option value="${escapeHtml(l)}"${f.loc === l ? " selected" : ""}>${escapeHtml(l)}</option>`).join("")}
+      </select>
+    </div>
+    <div id="item-grid-wrap">${items.length ? `<div class="item-grid">${items.map(itemCard).join("")}</div>` : emptyHtml("archive")}</div>
   </section>`;
 }
 
@@ -869,7 +1076,9 @@ function openItem(id) {
 
     <div class="modal-actions">
       <div class="modal-actions__left">
-        ${item.status !== "abgeholt" ? `<button class="btn btn--outline btn--sm" data-action="archive-item" data-id="${item.id}">${icon("archive", 14)} Archivieren</button>` : ""}
+        ${item.status === "archiviert"
+          ? `<button class="btn btn--primary btn--sm" data-action="restore-item" data-id="${item.id}">${icon("check", 14)} Aus Archiv wiederherstellen</button>`
+          : (item.status !== "abgeholt" ? `<button class="btn btn--outline btn--sm" data-action="archive-item" data-id="${item.id}">${icon("archive", 14)} Archivieren</button>` : "")}
         <button class="btn btn--danger btn--sm" data-action="delete-item" data-id="${item.id}">${icon("trash", 14)} Löschen</button>
       </div>
       <button class="btn btn--ghost btn--sm" data-action="close-modal">Schließen</button>
@@ -959,6 +1168,18 @@ async function archiveItem(id) {
   const { error } = await db.from(TBL_ITEMS).update({ status: "archiviert", events: it.events }).eq("id", id);
   if (error) { toast("Archivieren fehlgeschlagen: " + error.message, "error"); return; }
   toast("Eintrag archiviert.");
+  render();
+  if (state.selectedId === id) openItem(id);
+}
+
+async function restoreItem(id) {
+  const it = state.items.find(i => i.id === id);
+  if (!it) return;
+  it.status = "offen";
+  it.events.push({ ts: Date.now(), text: "Aus dem Archiv wiederhergestellt" });
+  const { error } = await db.from(TBL_ITEMS).update({ status: "offen", events: it.events }).eq("id", id);
+  if (error) { toast("Wiederherstellen fehlgeschlagen: " + error.message, "error"); return; }
+  toast("Eintrag aus dem Archiv wiederhergestellt.", "success");
   render();
   if (state.selectedId === id) openItem(id);
 }
@@ -1227,14 +1448,16 @@ async function resetData() {
 /* ---------------- Event-Bindung (Delegierung) ---------------- */
 let listTimer = null;
 function refreshList() {
-  const items = applyFilters(state.items);
+  const isArchive = state.view === "archiv";
+  const baseItems = isArchive ? state.items.filter(i => i.status === "archiviert") : state.items;
+  const items = applyFilters(baseItems, isArchive);
   const grid = document.getElementById("item-grid-wrap");
   const pill = document.getElementById("count-pill");
   if (!grid) return;
   grid.innerHTML = items.length
     ? `<div class="item-grid">${items.map(itemCard).join("")}</div>`
-    : emptyHtml("list");
-  if (pill) pill.textContent = items.length + " Treffer";
+    : emptyHtml(isArchive ? "archive" : "list");
+  if (pill) pill.textContent = isArchive ? items.length + " archiviert" : items.length + " Treffer";
 }
 
 function bindEvents() {
@@ -1252,6 +1475,7 @@ function bindEvents() {
         case "link-items": linkItems(el.dataset.a, el.dataset.b); return;
         case "mark-retrieved": markRetrieved(el.dataset.id); return;
         case "archive-item": archiveItem(el.dataset.id); return;
+        case "restore-item": restoreItem(el.dataset.id); return;
         case "delete-item": deleteItem(el.dataset.id); return;
         case "export-data": exportData(); return;
         case "import-data": { const i = document.getElementById("import-file"); if (i) i.click(); return; }

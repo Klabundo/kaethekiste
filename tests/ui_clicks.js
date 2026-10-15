@@ -259,6 +259,7 @@ async function main() {
   console.log("\n-- Topbar / Navigation (data-action=nav) --");
   const views = [
     ["liste", "item-card"],
+    ["archiv", "count-pill"],
     ["form-lost", 'id="form-lost"'],
     ["form-found", 'id="form-found"'],
     ["statistik", "bar-fill"],
@@ -344,6 +345,9 @@ async function main() {
   click({ action: "archive-item", id: casio.id });
   await sleep(150);
   check("„Archivieren“ (DB)", store.fundsachen.find(r => r.id === casio.id).status === "archiviert");
+  click({ action: "restore-item", id: casio.id });
+  await sleep(150);
+  check("„Aus Archiv wiederherstellen“ (DB)", store.fundsachen.find(r => r.id === casio.id).status === "offen");
   click({ action: "delete-item", id: lunch.id });
   await sleep(150);
   check("„Löschen“: Eintrag + Zuordnung aus DB", !store.fundsachen.some(r => r.id === lunch.id) && !store.zuordnungen.some(l => l.item_a === lunch.id || l.item_b === lunch.id));
