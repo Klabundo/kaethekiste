@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>KätheKiste</title>
+  <script>
+    var path = window.location.pathname;
+    if (/\/admin\/?$/.test(path)) {
+      window.location.replace(window.location.origin + "/kaethekiste/#/admin");
+    } else {
+      window.location.replace(window.location.origin + "/kaethekiste/");
+    }
+  </script>
+</head>
+<body>
+</body>
+</html>

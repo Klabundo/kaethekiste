@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>KätheKiste – Admin</title>
+  <script>
+    // Leitet nahtlos auf die Admin-Route um
+    var base = window.location.pathname.replace(/\/admin\/?$/, "");
+    window.location.replace((base || "") + "/#/admin");
+  </script>
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=../#/admin" />
+  </noscript>
+</head>
+<body>
+</body>
+</html>
