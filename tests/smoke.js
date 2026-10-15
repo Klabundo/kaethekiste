@@ -17,6 +17,16 @@ function check(name, cond, extra = "") {
 function deepCopy(v) { return JSON.parse(JSON.stringify(v)); }
 
 /* ---------- In-Memory-DB + Supabase-Mock ---------- */
+function makeLocalStorage() {
+  const m = new Map();
+  return {
+    getItem: k => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(String(k), String(v)),
+    removeItem: k => m.delete(String(k)),
+    clear: () => m.clear(),
+  };
+}
+
 function makeStore() {
   return { fundsachen: [], zuordnungen: [], storage: new Map(), channels: [] };
 }
@@ -146,6 +156,7 @@ const elements = {};
 const documentStub = {
   readyState: "loading",
   addEventListener() {},
+  documentElement: { dataset: {} },
   getElementById(id) { if (!elements[id]) elements[id] = makeEl(); return elements[id]; },
   createElement() { return makeEl(); },
   querySelector() { return makeEl(); },
@@ -156,6 +167,7 @@ const documentStub = {
 const store = makeStore();
 const sandbox = {
   document: documentStub,
+  localStorage: makeLocalStorage(),
   SupabaseJS: makeSupabaseJS(store),
   confirm: () => true,
   console,

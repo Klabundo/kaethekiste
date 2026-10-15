@@ -19,6 +19,16 @@ function deepCopy(v) { return JSON.parse(JSON.stringify(v)); }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------- In-Memory-DB + Supabase-Mock (wie smoke.js) ---------- */
+function makeLocalStorage() {
+  const m = new Map();
+  return {
+    getItem: k => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(String(k), String(v)),
+    removeItem: k => m.delete(String(k)),
+    clear: () => m.clear(),
+  };
+}
+
 function makeStore() {
   return { fundsachen: [], zuordnungen: [], storage: new Map(), channels: [] };
 }
@@ -169,6 +179,7 @@ const listeners = {};
 const documentStub = {
   readyState: "complete", // → init() läuft direkt beim Laden
   addEventListener(t, cb) { (listeners[t] = listeners[t] || []).push(cb); },
+  documentElement: { dataset: {} },
   dispatchClick(target) {
     const ev = { target, preventDefault() {}, stopPropagation() {} };
     (listeners.click || []).forEach(h => h(ev));
@@ -185,6 +196,7 @@ const documentStub = {
 const store = makeStore();
 const sandbox = {
   document: documentStub,
+  localStorage: makeLocalStorage(),
   SupabaseJS: makeSupabaseJS(store),
   confirm: () => true,
   console,
@@ -380,6 +392,18 @@ async function main() {
   click({ action: "retry-load" });
   await sleep(100);
   check("„Erneut versuchen“ (retry-load)", api.state.loadError === false && api.state.items.length > 0);
+
+  console.log("\n-- Design-Theme (toggle-theme) --");
+  check("Default: helles Design (kein dunkles Attribut, State=light)",
+    documentStub.documentElement.dataset.theme !== "dark" && api.state.theme === "light");
+  click({ action: "toggle-theme" });
+  check("Toggle → dunkel (data-theme am <html> + State)",
+    documentStub.documentElement.dataset.theme === "dark" && api.state.theme === "dark");
+  check("Wahl wird lokal gespeichert (kk-theme=dark)", sandbox.localStorage.getItem("kk-theme") === "dark");
+  click({ action: "toggle-theme" });
+  check("Toggle zurück → hell (data-theme + State + Speicherung)",
+    documentStub.documentElement.dataset.theme === "light" && api.state.theme === "light" &&
+    sandbox.localStorage.getItem("kk-theme") === "light");
 
   console.log("\n-- Zurücksetzen (letzte Aktion) --");
   click({ action: "reset-data" });

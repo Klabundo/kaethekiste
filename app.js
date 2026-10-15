@@ -76,10 +76,45 @@ const state = {
   view: "hilfe", // Start: Hilfe mit kompaktem Onboarding
   filters: { q: "", type: "alle", status: "aktiv", cat: "alle", loc: "alle" },
   selectedId: null,
+  theme: "light", // Design-Theme (hell = Default, dunkel = opt-in)
   loadError: false, // letzter Datenabruf fehlgeschlagen (Banner über der Ansicht)
   saving: false,    // Formular-Submit läuft (Doppelklick-Schutz)
 };
 let draftPhoto = null; // Bild für das gerade ausgefüllte Formular (Data-URL)
+
+/* ---------------- Design-Theme (hell = Default, dunkel = opt-in) ----------------
+   Die Wahl wird unter kk-theme in localStorage gespeichert und früh in
+   index.html vor dem ersten Paint auf <html data-theme="…"> gesetzt,
+   damit es keinen Farbsprung beim Laden gibt. */
+const THEME_KEY = "kk-theme";
+const THEME_ICONS = {
+  moon: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"/></svg>',
+  sun: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+};
+function currentTheme() {
+  const ds = document.documentElement && document.documentElement.dataset;
+  return ds && ds.theme === "dark" ? "dark" : "light";
+}
+function applyTheme(theme, persist = false) {
+  state.theme = theme;
+  if (document.documentElement) document.documentElement.dataset.theme = theme;
+  if (persist) {
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) { /* z. B. Safari-Privatmodus */ }
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && meta.setAttribute) meta.setAttribute("content", theme === "dark" ? "#191a1c" : "#f4f3ef");
+  const btn = document.querySelector('[data-action="toggle-theme"]');
+  if (btn) {
+    const dark = theme === "dark";
+    btn.innerHTML = dark ? THEME_ICONS.sun : THEME_ICONS.moon;
+    const label = dark ? "Helles Design aktivieren" : "Dunkles Design aktivieren";
+    btn.setAttribute("aria-label", label);
+    btn.setAttribute("title", label);
+  }
+}
+function toggleTheme() {
+  applyTheme(currentTheme() === "dark" ? "light" : "dark", true);
+}
 
 /* ---------------- Utilities ---------------- */
 function uid() {
@@ -1470,6 +1505,7 @@ function bindEvents() {
         case "nav-close": closeModal(); setView(el.dataset.view); return;
         case "home": setView("start"); return;
         case "toggle-menu": toggleMenu(el); return;
+        case "toggle-theme": toggleTheme(); return;
         case "open-item": openItem(el.dataset.id); return;
         case "close-modal": closeModal(); return;
         case "link-items": linkItems(el.dataset.a, el.dataset.b); return;
@@ -1548,6 +1584,7 @@ function bindEvents() {
 /* ---------------- Init ---------------- */
 async function init() {
   bindEvents();
+  applyTheme(currentTheme()); // Theme synchronisieren (Knopf-Symbol, Theme-Color)
   updateFooterCount();
   if (await loadItems()) subscribeRealtime();
   render();
