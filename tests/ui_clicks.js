@@ -353,6 +353,12 @@ async function main() {
   click({ action: "mark-retrieved", id: thermo.id });
   await sleep(150);
   check("„Abholung bestätigen“: beide abgeholt (DB)", store.fundsachen.find(r => r.id === thermo.id).status === "abgeholt" && store.fundsachen.find(r => r.id === lunch.id).status === "abgeholt");
+  const book = api.state.items.find(i => /prinz/i.test(i.title) && i.status === "offen");
+  check("Offenes Buch gefunden", !!book);
+  click({ action: "claim-item", id: book.id });
+  await sleep(150);
+  check("„Direkt annehmen“ (claim-item): abgeholt (DB)", store.fundsachen.find(r => r.id === book.id).status === "abgeholt");
+
   const casio = api.state.items.find(i => /casio/i.test(i.title));
   click({ action: "archive-item", id: casio.id });
   await sleep(150);

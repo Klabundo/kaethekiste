@@ -190,7 +190,7 @@ const exportLine = `
   normalize, tokenize, jaccard, viewStart, viewList, viewArchive, viewForm, viewStats, viewHelp,
   itemCard, setView, STATUS, ACTIVE_STATUSES,
   loadItems, subscribeRealtime, retryLoad, uploadPhoto, removePhoto,
-  handleFormSubmit, handleImport, linkItems, markRetrieved,
+  handleFormSubmit, handleImport, linkItems, markRetrieved, claimItem,
   archiveItem, restoreItem, deleteItem, resetData, rowToItem, itemToRow,
   TBL_ITEMS, TBL_LINKS, BUCKET_FOTOS };
 `;
@@ -320,6 +320,14 @@ async function main() {
   await api.markRetrieved(thermo.id);
   check("beide abgeholt (State)", thermo.status === "abgeholt" && lunch.status === "abgeholt");
   check("Abholung in DB + Event", store.fundsachen.find(r => r.id === lunch.id).status === "abgeholt" && store.fundsachen.find(r => r.id === lunch.id).events.some(e => /Abholung/i.test(e.text)));
+
+  console.log("\n-- Direktes Annehmen (ohne Matching) --");
+  const umbrella = api.state.items.find(i => /regenschirm/i.test(i.title) && i.status === "offen");
+  check("Regenschirm ist offen", !!umbrella);
+  await api.claimItem(umbrella.id);
+  check("Direkt annehmen setzt Status auf abgeholt (State)", umbrella.status === "abgeholt");
+  check("Direkt annehmen in DB", store.fundsachen.find(r => r.id === umbrella.id).status === "abgeholt");
+  check("Direkt annehmen Event erfasst", store.fundsachen.find(r => r.id === umbrella.id).events.some(e => /Direkt angenommen|wiedergefunden/i.test(e.text)));
 
   console.log("\n-- Archivieren & Wiederherstellen --");
   const muetze = api.state.items.find(i => /mütze|muetze/i.test(i.title) && i.status === "archiviert");

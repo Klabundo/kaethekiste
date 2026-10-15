@@ -543,6 +543,8 @@ function photoPlaceholder(id) {
 }
 function itemCard(item) {
   const photo = item.photo ? `<img src="${item.photo}" alt="">` : photoPlaceholder(item.category);
+  const isOpen = item.status === "offen";
+  const claimLabel = item.type === "found" ? "Annehmen" : "Erledigt";
   return `
   <article class="item-card" data-action="open-item" data-id="${item.id}" tabindex="0">
     <div class="item-card__photo">${photo}</div>
@@ -556,7 +558,10 @@ function itemCard(item) {
       </div>
       <div class="item-card__foot">
         <span class="cat-label">${escapeHtml(catLabel(item.category))}</span>
-        <span class="details-link">Details${icon("arrow", 13)}</span>
+        <div class="item-card__foot-actions">
+          ${isOpen ? `<button type="button" class="btn btn--outline btn--xs btn-claim-quick" data-action="claim-item" data-id="${item.id}" title="${item.type === "found" ? "Direkt annehmen" : "Als erledigt markieren"}">${icon("check", 11)} ${claimLabel}</button>` : ""}
+          <span class="details-link">Details${icon("arrow", 13)}</span>
+        </div>
       </div>
     </div>
   </article>`;
@@ -1095,6 +1100,19 @@ function openItem(id) {
       ? matchBoxHtml(item, matches, isFound ? "Passende Verluste erkannt" : "Passende Funde erkannt")
       : ""}
 
+    ${item.status === "offen" ? `
+    <div class="claim-box">
+      <div class="claim-box__head">
+        <h3>${icon("check", 15)} ${isFound ? "Das gehört dir?" : "Gegenstand wieder da?"}</h3>
+        <p>${isFound
+          ? "Du erkennst die Fundsache wieder? Du kannst sie direkt annehmen und als abgeholt markieren – ganz ohne extra Verlustmeldung oder Matching."
+          : "Du hast die Sache wiederbekommen? Markiere sie hier direkt als erledigt."}</p>
+      </div>
+      <button class="btn btn--primary btn--sm" data-action="claim-item" data-id="${item.id}">
+        ${icon("check", 14)} ${isFound ? "Direkt annehmen" : "Als erledigt markieren"}
+      </button>
+    </div>` : ""}
+
     ${matched && item.status === "in_abwicklung" ? `
     <div class="match-box match-box--done">
       <div class="match-box__head">
@@ -1113,7 +1131,10 @@ function openItem(id) {
       <div class="modal-actions__left">
         ${item.status === "archiviert"
           ? `<button class="btn btn--primary btn--sm" data-action="restore-item" data-id="${item.id}">${icon("check", 14)} Aus Archiv wiederherstellen</button>`
-          : (item.status !== "abgeholt" ? `<button class="btn btn--outline btn--sm" data-action="archive-item" data-id="${item.id}">${icon("archive", 14)} Archivieren</button>` : "")}
+          : (item.status === "offen"
+            ? `<button class="btn btn--primary btn--sm" data-action="claim-item" data-id="${item.id}">${icon("check", 14)} ${isFound ? "Direkt annehmen" : "Als erledigt markieren"}</button>
+               <button class="btn btn--outline btn--sm" data-action="archive-item" data-id="${item.id}">${icon("archive", 14)} Archivieren</button>`
+            : (item.status !== "abgeholt" ? `<button class="btn btn--outline btn--sm" data-action="archive-item" data-id="${item.id}">${icon("archive", 14)} Archivieren</button>` : ""))}
         <button class="btn btn--danger btn--sm" data-action="delete-item" data-id="${item.id}">${icon("trash", 14)} Löschen</button>
       </div>
       <button class="btn btn--ghost btn--sm" data-action="close-modal">Schließen</button>
@@ -1193,6 +1214,35 @@ async function markRetrieved(id) {
   toast("Abholung bestätigt – erledigt.", "success");
   render();
   openItem(id);
+}
+
+async function claimItem(id) {
+  const item = state.items.find(i => i.id === id);
+  if (!item) return;
+  const isFound = item.type === "found";
+  const question = isFound
+    ? `Gegenstand „${item.title}“ direkt annehmen?\n\nGib optional deinen Namen/Klasse ein (z. B. „Sami, 9.1“):`
+    : `Verlust „${item.title}“ als wiedergefunden / erledigt markieren?\n\nOptionaler Vermerk (z. B. „In Raum 9.3 wiedergefunden“):`;
+  const hasPrompt = typeof prompt === "function";
+  const note = hasPrompt ? prompt(question, "") : "";
+  if (note === null) return;
+
+  const ts = Date.now();
+  item.status = "abgeholt";
+  const noteClean = (note || "").trim();
+  const eventText = isFound
+    ? (noteClean ? `Direkt angenommen durch ${noteClean} – Sache abgeholt` : "Direkt angenommen – Sache abgeholt")
+    : (noteClean ? `Als wiedergefunden markiert (${noteClean}) – erledigt` : "Als wiedergefunden markiert – erledigt");
+  item.events.push({ ts, text: eventText });
+
+  const { error } = await db.from(TBL_ITEMS).update({ status: "abgeholt", events: item.events }).eq("id", id);
+  if (error) {
+    toast("Konnte nicht gespeichert werden: " + error.message, "error");
+    return;
+  }
+  toast(isFound ? "Gegenstand direkt angenommen – als erledigt markiert." : "Eintrag als erledigt markiert.", "success");
+  render();
+  if (state.selectedId === id) openItem(id);
 }
 
 async function archiveItem(id) {
@@ -1510,6 +1560,7 @@ function bindEvents() {
         case "close-modal": closeModal(); return;
         case "link-items": linkItems(el.dataset.a, el.dataset.b); return;
         case "mark-retrieved": markRetrieved(el.dataset.id); return;
+        case "claim-item": claimItem(el.dataset.id); return;
         case "archive-item": archiveItem(el.dataset.id); return;
         case "restore-item": restoreItem(el.dataset.id); return;
         case "delete-item": deleteItem(el.dataset.id); return;
