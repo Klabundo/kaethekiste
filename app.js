@@ -573,7 +573,6 @@ function matchBoxHtml(item, matches, headline, canLink = true) {
   <div class="match-box">
     <div class="match-box__head">
       <h3>${headline}</h3>
-      <p>Der Algorithmus hat ähnliche Einträge erkannt. Mit „Zuordnen“ wird ein Abhol-Prozess gestartet – die eigentliche Abholung läuft über die Schule (z.&nbsp;B. Sekretariat).</p>
     </div>
     <div class="match-list">
       ${matches.map(m => `
@@ -594,15 +593,13 @@ function matchBoxHtml(item, matches, headline, canLink = true) {
 
 function dropzoneHtml() {
   return `${icon("image", 22)}
-  <div><strong>Foto hochladen</strong> <span class="muted">· optional</span></div>
-  <div class="dz-sub">JPG oder PNG – wird automatisch verkleinert.</div>`;
+  <div><strong>Foto hinzufügen</strong> <span class="muted">(optional)</span></div>`;
 }
 
 function emptyHtml(kind) {
   if (kind === "archive") {
     return `<div class="empty">
       <h3 class="empty-title">Keine archivierten Einträge</h3>
-      <p>Es befinden sich zurzeit keine Fundsachen im Archiv (oder die Filter liefern keine Treffer).</p>
       <div class="empty-actions">
         <button class="btn btn--primary" data-action="nav" data-view="liste">Zur Fundsachen-Liste</button>
       </div>
@@ -611,7 +608,6 @@ function emptyHtml(kind) {
   if (kind === "list") {
     return `<div class="empty">
       <h3 class="empty-title">Keine Einträge gefunden</h3>
-      <p>Filter oder Suchbegriff anpassen – oder direkt einen neuen Eintrag anlegen.</p>
       <div class="empty-actions">
         <button class="btn btn--primary" data-action="nav" data-view="form-lost">Verlust melden</button>
         <button class="btn btn--outline" data-action="nav" data-view="form-found">Fund melden</button>
@@ -620,7 +616,6 @@ function emptyHtml(kind) {
   }
   return `<div class="empty">
     <h3 class="empty-title">Noch keine aktiven Einträge</h3>
-    <p>Die gemeinsame Liste ist gerade leer – beim ersten Melden wird sie hier automatisch gefüllt.</p>
     <div class="empty-actions">
       <button class="btn btn--primary" data-action="nav" data-view="form-lost">Verlust melden</button>
       <button class="btn btn--outline" data-action="nav" data-view="form-found">Fund melden</button>
@@ -640,7 +635,7 @@ function viewStart() {
   <div class="hero">
     <p class="hero-kicker">Käthe-Kollwitz-Gymnasium · Fundsachen</p>
     <h1>Das Fundsachen-System der Schule.</h1>
-    <p class="lead">Verluste und Funde an einem Ort – der Algorithmus erkennt automatisch, welcher Verlust zu welchem Fund passt. Die Abholung läuft über das Sekretariat.</p>
+    <p class="lead">Verluste und Funde an einem Ort – automatisch abgeglichen.</p>
     <div class="hero-actions">
       <button class="btn btn--outline" data-action="nav" data-view="form-lost">Etwas verloren?</button>
       <button class="btn btn--primary" data-action="nav" data-view="form-found">Etwas gefunden?</button>
@@ -649,17 +644,16 @@ function viewStart() {
   </div>
 
   <div class="stats">
-    <div class="stat"><div class="num">${found}</div><div class="lbl">Funde offen</div><div class="hint">warten auf Eigentümer:in</div></div>
-    <div class="stat"><div class="num">${lost}</div><div class="lbl">Verluste offen</div><div class="hint">werden aktiv gesucht</div></div>
-    <div class="stat"><div class="num">${solved}</div><div class="lbl">Erfolgreich gelöst</div><div class="hint">seit Einrichtung</div></div>
-    <div class="stat" data-action="nav" data-view="archiv" role="button" tabindex="0" title="Zum Archiv" style="cursor:pointer;"><div class="num">${archived}</div><div class="lbl">Im Archiv</div><div class="hint">ältere Einträge ansehen →</div></div>
+    <div class="stat"><div class="num">${found}</div><div class="lbl">Funde offen</div></div>
+    <div class="stat"><div class="num">${lost}</div><div class="lbl">Verluste offen</div></div>
+    <div class="stat"><div class="num">${solved}</div><div class="lbl">Erfolgreich gelöst</div></div>
+    <div class="stat" data-action="nav" data-view="archiv" role="button" tabindex="0" title="Zum Archiv" style="cursor:pointer;"><div class="num">${archived}</div><div class="lbl">Im Archiv</div></div>
   </div>
 
   <section class="card">
     <div class="section-head">
       <div>
         <h2 class="section-title">Aktuelle Fundsachen</h2>
-        <p class="section-sub">Die ${Math.min(8, recent.length)} neuesten offenen Einträge – Details, Matches und Aktionen im Klick.</p>
       </div>
       <span class="count-pill">${active.length} aktiv</span>
     </div>
@@ -677,7 +671,6 @@ function viewList() {
     <div class="section-head">
       <div>
         <h2 class="section-title">Alle Fundsachen</h2>
-        <p class="section-sub">Verlorenes und Gefundenes der Schule – durchsuchen, filtern und im Detail vergleichen.</p>
       </div>
       <div style="display:flex; gap:10px; align-items:center;">
         <span class="count-pill" id="count-pill">${items.length} Treffer</span>
@@ -724,7 +717,6 @@ function viewArchive() {
     <div class="section-head">
       <div>
         <h2 class="section-title">${icon("archive", 20)} Archivierte Fundsachen</h2>
-        <p class="section-sub">Gegenstände, die nach längerer Aufbewahrung oder Klärung archiviert wurden. Einträge können eingesehen, wiederhergestellt oder gelöscht werden.</p>
       </div>
       <div style="display:flex; gap:10px; align-items:center;">
         <span class="count-pill" id="count-pill">${items.length} archiviert</span>
@@ -757,8 +749,8 @@ function viewArchive() {
 function viewForm(type) {
   const isFound = type === "found";
   const head = isFound
-    ? { title: "Du hast etwas gefunden.", sub: "Damit die:r Besitzer:in es zurückbekommt, erfasse den Fund hier. Der Algorithmus prüft sofort, ob jemand den Verlust schon gemeldet hat." }
-    : { title: "Etwas von dir fehlt?", sub: "Beschreib das Teil möglichst genau (Marke, Farbe, Details). So kann der Algorithmus passende Funde finden und die Zuordnung vorschlagen." };
+    ? { title: "Fund melden", sub: "Fundgegenstand eintragen – passende Verluste werden automatisch abgeglichen." }
+    : { title: "Verlust melden", sub: "Verlorenen Gegenstand eintragen – passende Funde werden automatisch abgeglichen." };
   return `
   <section class="card">
     <div class="section-head">
@@ -809,19 +801,19 @@ function viewForm(type) {
         </div>
 
         <div class="field field--full">
-          <label for="f-desc">Beschreibung &amp; Erkennungsmerkmale</label>
-          <textarea name="description" id="f-desc" maxlength="500" placeholder="Details helfen bei der Zuordnung: Beschriftung, Aufkleber, Inhalt, Zustand …"></textarea>
-          <span class="hint">Max. 500 Zeichen. Keine Passwörter, Schlüssel oder vollständigen Adressen eintragen.</span>
+          <label for="f-desc">Beschreibung</label>
+          <textarea name="description" id="f-desc" maxlength="500" placeholder="Merkmale, Zustand, Besonderheiten …"></textarea>
+          <span class="hint">Max. 500 Zeichen.</span>
         </div>
 
         <div class="field">
           <label for="f-reporter">Dein Name / Klasse</label>
-          <input name="reporter" id="f-reporter" maxlength="60" placeholder="${isFound ? "z.&nbsp;B. „Mira, 8.3“ – bleibt intern" : "z.&nbsp;B. „Sami K. (9.1)“"}">
+          <input name="reporter" id="f-reporter" maxlength="60" placeholder="${isFound ? "z.&nbsp;B. „Mira, 8.3“" : "z.&nbsp;B. „Sami K. (9.1)“"}">
         </div>
         <div class="field">
           <label for="f-contact">${isFound ? "Weiterleitung an <span class=\"req\">*</span>" : "Rückmeldung"}</label>
-          <input name="contact" id="f-contact" ${isFound ? "required" : ""} maxlength="80" placeholder="${isFound ? "z.&nbsp;B. „Lehrkraft H. Weber“ oder „Schüler:in 9.2, Platz 12“" : "z.&nbsp;B. „per E-Mail an Klassenlehrkraft“"}">
-          ${isFound ? `<span class="hint">Wohin der Fund gebracht wird (z.&nbsp;B. Sekretariat, Lehrkraft) – nicht deine private Handynummer.</span>` : ""}
+          <input name="contact" id="f-contact" ${isFound ? "required" : ""} maxlength="80" placeholder="${isFound ? "z.&nbsp;B. „Sekretariat“ oder „Lehrkraft H. Weber“" : "z.&nbsp;B. „per E-Mail an Klassenlehrkraft“"}">
+          ${isFound ? `<span class="hint">Ort/Person der Abgabe (z.&nbsp;B. Sekretariat, Lehrkraft).</span>` : ""}
         </div>
 
         <div class="field field--full">
@@ -838,7 +830,7 @@ function viewForm(type) {
       <div class="form-actions">
         <button type="submit" class="btn btn--primary">${isFound ? "Fund melden" : "Verlust melden"}</button>
         <button type="button" class="btn btn--ghost" data-action="nav" data-view="liste">Abbrechen</button>
-        <span class="consent">Mit dem Absenden erklären sich einverstanden, dass die Angaben intern zur Vermittlung genutzt werden. Es gelten die Datenschutzregeln der Schule.</span>
+        <span class="consent">Angaben werden intern zur Zuordnung genutzt.</span>
       </div>
     </form>
   </section>`;
@@ -861,14 +853,14 @@ function updateLiveMatches(form) {
     description: form.querySelector("[name=description]").value,
   };
   if (tokenize(probe.title + " " + probe.description).length < 2) {
-    box.innerHTML = `<p class="hint live-hint">Während du Titel und Beschreibung eingibst, sucht der Algorithmus hier automatisch nach passenden ${type === "lost" ? "Funden" : "Verlusten"} in der Datenbank.</p>`;
+    box.innerHTML = "";
     return;
   }
   const matches = findMatches(probe, 3, 0.30);
   const counterpart = type === "lost" ? "Funde" : "Verluste";
   box.innerHTML = matches.length
     ? matchBoxHtml(probe, matches, `Mögliche ${counterpart} in der Datenbank`, false)
-    : `<p class="hint live-hint">Bisher keine passenden ${counterpart} gefunden – deine Angaben sind gut und eindeutig. Nach dem Absenden bleibt der Eintrag aktiv und wird abgeglichen.</p>`;
+    : "";
 }
 
 /* ---------------- Ansicht: Statistik ---------------- */
@@ -902,7 +894,6 @@ function viewStats() {
     <div class="section-head">
       <div>
         <h2 class="section-title">Übersicht</h2>
-        <p class="section-sub">Ein Blick auf das Fundsachen-System – wie es für die Schule läuft.</p>
       </div>
     </div>
     <div class="dash-grid">
@@ -910,8 +901,8 @@ function viewStats() {
       <div class="stat"><div class="num">${lost}</div><div class="lbl">Verluste offen</div></div>
       <div class="stat"><div class="num">${inWork}</div><div class="lbl">In Zuordnung</div></div>
       <div class="stat"><div class="num">${solved.length}</div><div class="lbl">Erfolgreich gelöst</div></div>
-      <div class="stat"><div class="num">${matchRate}&nbsp;%</div><div class="lbl">Erfolgsquote</div><div class="hint">gelöst / alle Einträge</div></div>
-      <div class="stat"><div class="num">${avgHours != null ? avgHours + " h" : "–"}</div><div class="lbl">Ø bis zur Abholung</div><div class="hint">Melderfassung → Abholung</div></div>
+      <div class="stat"><div class="num">${matchRate}&nbsp;%</div><div class="lbl">Erfolgsquote</div></div>
+      <div class="stat"><div class="num">${avgHours != null ? avgHours + " h" : "–"}</div><div class="lbl">Ø bis zur Abholung</div></div>
     </div>
   </section>
 
@@ -920,7 +911,6 @@ function viewStats() {
       <div class="section-head">
         <div>
           <h2 class="section-title">Top-Kategorien</h2>
-          <p class="section-sub">Wo die meisten Sachen landen (aktive + gelöste Einträge).</p>
         </div>
       </div>
       ${topCats.length ? `<div class="bars">
@@ -930,7 +920,7 @@ function viewStats() {
           <span class="bar-track"><span class="bar-fill" style="width:${Math.round((v / maxCat) * 100)}%"></span></span>
           <span class="val">${v}</span>
         </div>`).join("")}
-      </div>` : `<p class="hint">Noch keine Daten – erst ein paar Einträge anlegen.</p>`}
+      </div>` : `<p class="hint">Noch keine Daten vorhanden.</p>`}
       <div class="stat-note">
         <span class="meta-item">${active.length} aktiv</span>
         <span class="meta-item">${archived} archiviert</span>
@@ -942,7 +932,6 @@ function viewStats() {
       <div class="section-head">
         <div>
           <h2 class="section-title">Letzte Aktivitäten</h2>
-          <p class="section-sub">Die letzten 8 Einträge, unabhängig vom Status.</p>
         </div>
       </div>
       <div class="recent-list">
@@ -954,7 +943,7 @@ function viewStats() {
           </div>
           ${typeTag(i.type)}
           ${icon("arrow", 14)}
-        </div>`).join("") || `<p class="hint">Noch keine Einträge.</p>`}
+        </div>`).join("") || `<p class="hint">Noch keine Einträge vorhanden.</p>`}
       </div>
     </section>
   </div>`;
@@ -967,53 +956,18 @@ function viewHelp() {
     <div class="section-head">
       <div>
         <h2 class="section-title">So funktioniert’s</h2>
-        <p class="section-sub">Vier Schritte – vom Fund bis zur Abholung. So nimmt deine Klasse das System in zwei Minuten in Betrieb.</p>
       </div>
     </div>
     <ol class="steps onb-steps">
-      <li><strong>Melden:</strong> Verlust oder Fund erfassen – am besten mit Foto, Kategorie und Ort.</li>
-      <li><strong>Auto-Abgleich:</strong> Der Algorithmus schlägt sofort passende Gegenstücke vor, inkl. Ähnlichkeits-Grad.</li>
-      <li><strong>Zuordnen:</strong> Passt der Vorschlag, werden beide Einträge verknüpft – Status wechselt auf „In Abwicklung“.</li>
-      <li><strong>Abholen:</strong> Im Sekretariat abholen – nach kurzer Identifikation wird der Eintrag als erledigt markiert.</li>
+      <li><strong>Melden:</strong> Verlust oder Fund erfassen – idealerweise mit Foto und Ort.</li>
+      <li><strong>Auto-Abgleich:</strong> Das System vergleicht neue Einträge automatisch.</li>
+      <li><strong>Zuordnen:</strong> Passende Einträge mit einem Klick verknüpfen.</li>
+      <li><strong>Abholen:</strong> Gegenstand im Sekretariat abholen oder direkt als erledigt annehmen.</li>
     </ol>
     <div class="card-actions">
       <button class="btn btn--primary btn--sm" data-action="nav" data-view="form-lost">Etwas verloren?</button>
       <button class="btn btn--outline btn--sm" data-action="nav" data-view="form-found">Etwas gefunden?</button>
       <span class="link-arrow" role="button" tabindex="0" data-action="nav" data-view="liste">Zur Fundsachen-Liste${icon("arrow", 14)}</span>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="section-head">
-      <div>
-        <h2 class="section-title">Hilfe</h2>
-        <p class="section-sub">Kurz erklärt: Rollen, Ablauf und was unter der Haube läuft.</p>
-      </div>
-    </div>
-    <div class="help-grid">
-      <div class="help-card">
-        <h3>Rollen</h3>
-        <ul>
-          <li><strong>Schüler:innen:</strong> Verluste und Funde melden, Matches prüfen.</li>
-          <li><strong>Lehrkräfte / Sekretariat:</strong> Zuordnungen freigeben, Abholungen bestätigen (im Prototyp: direkt über die Detailansicht).</li>
-        </ul>
-      </div>
-      <div class="help-card">
-        <h3>Matching</h3>
-        <p>Titel, Beschreibung, Marke, Farbe, Kategorie und Ort werden normalisiert und per Jaccard-Ähnlichkeit verglichen; Kategorien-Matches zählen besonders stark. Ab ~35&nbsp;% wird ein Treffer angezeigt – die Freigabe bleibt immer bei Menschen.</p>
-      </div>
-      <div class="help-card">
-        <h3>Datenschutz</h3>
-        <p>Die Einträge liegen gemeinsam in einer Cloud-Datenbank (Supabase, Region Frankfurt) – wer das System öffnet, sieht dieselben Daten in Echtzeit. Fotos werden automatisch verkleinert. Private Handynummern oder Adressen gehören nicht in die Meldungen.</p>
-      </div>
-      <div class="help-card">
-        <h3>Starten &amp; Verwalten</h3>
-        <ul>
-          <li>Online: <code>klabundo.github.io/kaethekiste</code> – kein Login, kein Download.</li>
-          <li>Live-Sync: Neue Einträge erscheinen sofort bei allen, die die Seite offen haben.</li>
-          <li>Export/Import (JSON) unter „Daten“ – Backup oder Übertragung.</li>
-        </ul>
-      </div>
     </div>
   </section>
 
@@ -1026,25 +980,21 @@ function viewHelp() {
     <div class="faq">
       <details open>
         <summary>Was mache ich, wenn ich etwas finde?</summary>
-        <p>Abgabe ist beim Sekretariat (oder der zuständigen Lehrkraft). Parallel im System unter „Fund melden“ erfassen – am besten mit Foto und Ort. Passt ein Verlust dazu, wird die Zuordnung vorgeschlagen.</p>
+        <p>Abgabe im Sekretariat oder bei der zuständigen Lehrkraft. Parallel hier unter „Fund melden“ eintragen.</p>
       </details>
       <details>
-        <summary>Wie lange bleiben Funde im System?</summary>
-        <p>Offene Einträge bleiben aktiv, bis sie abgeholt oder archiviert werden. Im echten System würde ein Zeitplan laufen (z.&nbsp;B. 4 Wochen aktiv, dann Archiv/Fundbüro).</p>
+        <summary>Wie hole ich eine Fundsache ab?</summary>
+        <p>Im Sekretariat melden oder direkt über die Detailansicht der Fundsache annehmen.</p>
       </details>
       <details>
-        <summary>Wofür brauche ich einen Account?</summary>
-        <p>Keinen – die gemeinsame Datenbank ist ohne Login erreichbar, damit die ganze Klasse sofort mitmachen kann. Alle Meldungen sind im System für alle sichtbar, deshalb bitte nur Angaben aus dem Schul-Kontext (Name/Klasse) und keine privaten Kontaktdaten.</p>
-      </details>
-      <details>
-        <summary>Was ist der nächste Schritt nach dem Prototyp?</summary>
-        <p>Erledigt: gemeinsame Cloud-Datenbank (Supabase) mit Live-Synchronisation und Foto-Upload. Nächste Ausbaustufen: Benachrichtigung per E-Mail/Intranet, eine „Fundbüro“-Sicht für das Sekretariat mit Druckfunktion für Fundzettel und automatische Archivierung nach 4 Wochen.</p>
+        <summary>Wird ein Login benötigt?</summary>
+        <p>Nein, das Fundsachen-System ist direkt ohne Account für die gesamte Schule nutzbar.</p>
       </details>
     </div>
 
     <div class="data-block">
       <h2 class="data-block__title">Daten &amp; Pflege</h2>
-      <p class="data-block__sub">Die Daten liegen gemeinsam in der Cloud (Supabase). Hier lassen sich Daten sichern, übernehmen oder zurücksetzen – Vorsicht: „Alle Daten löschen“ betrifft die ganze Klasse.</p>
+      <p class="data-block__sub">Daten sichern, importieren oder zurücksetzen.</p>
       <div class="data-actions">
         <button class="btn btn--outline btn--sm" data-action="export-data">${icon("download", 14)} Als JSON exportieren</button>
         <button class="btn btn--outline btn--sm" data-action="import-data">${icon("upload", 14)} JSON importieren</button>
@@ -1103,10 +1053,7 @@ function openItem(id) {
     ${item.status === "offen" ? `
     <div class="claim-box">
       <div class="claim-box__head">
-        <h3>${icon("check", 15)} ${isFound ? "Das gehört dir?" : "Gegenstand wieder da?"}</h3>
-        <p>${isFound
-          ? "Du erkennst die Fundsache wieder? Du kannst sie direkt annehmen und als abgeholt markieren – ganz ohne extra Verlustmeldung oder Matching."
-          : "Du hast die Sache wiederbekommen? Markiere sie hier direkt als erledigt."}</p>
+        <h3>${icon("check", 15)} ${isFound ? "Direkt annehmen" : "Als erledigt markieren"}</h3>
       </div>
       <button class="btn btn--primary btn--sm" data-action="claim-item" data-id="${item.id}">
         ${icon("check", 14)} ${isFound ? "Direkt annehmen" : "Als erledigt markieren"}
@@ -1117,7 +1064,6 @@ function openItem(id) {
     <div class="match-box match-box--done">
       <div class="match-box__head">
         <h3>${icon("check", 15)} Zuordnung bestätigt</h3>
-        <p>Die Abholung wird über das Sekretariat / die zuständige Lehrkraft geregelt. Nach der Abholung hier bestätigen.</p>
       </div>
       <button class="btn btn--primary btn--sm" data-action="mark-retrieved" data-id="${item.id}">Abholung bestätigen</button>
     </div>` : ""}
@@ -1152,13 +1098,11 @@ function openSuccess(item, matches) {
     <div class="success-ic">${icon("check", 24)}</div>
     <h2 class="detail-title" id="modal-title">${escapeHtml(item.title)}</h2>
     <p class="detail-desc">
-      ${isFound
-        ? "Der Fund ist im System erfasst und wird bei passenden Verlusten automatisch gesucht."
-        : "Der Verlust ist gemeldet – bei passenden Funden wird die Zuordnung vorgeschlagen."}
+      ${isFound ? "Fund erfolgreich erfasst." : "Verlust erfolgreich gemeldet."}
     </p>
     ${matches.length
-      ? matchBoxHtml(item, matches, isFound ? "Passende Verluste gefunden – jetzt zuordnen!" : "Passende Funde gefunden – jetzt zuordnen!")
-      : `<div class="match-box match-box--plain"><p>Kein passender ${counterpart} in der Datenbank gefunden. Der Eintrag bleibt aktiv und wird laufend abgeglichen.</p></div>`}
+      ? matchBoxHtml(item, matches, isFound ? "Passende Verluste" : "Passende Funde")
+      : `<div class="match-box match-box--plain"><p>Kein direkter passender ${counterpart} gefunden. Eintrag bleibt aktiv.</p></div>`}
     <div class="modal-actions">
       <button class="btn btn--primary" data-action="open-item" data-id="${item.id}">Details ansehen</button>
       <button class="btn btn--ghost" data-action="nav-close" data-view="liste">Zur Liste</button>
